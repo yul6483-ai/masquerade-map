@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Masquerade Map Maker</title>
+<style>
+:root{font-family:Inter,"Noto Sans KR",Arial,sans-serif;color:#292a2d;background:#f7f8fa}
+*{box-sizing:border-box}body{margin:0;background:#f7f8fa}
+header{height:68px;background:#fff;border-bottom:1px solid #e8e9ec;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:5}
+.brand{font-weight:800;letter-spacing:.2px;font-size:17px}.brand span{color:#777;font-weight:500;font-size:12px;margin-left:8px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}button,.filebtn{border:1px solid #dedfe3;background:#fff;color:#333;border-radius:9px;padding:9px 12px;font-size:13px;cursor:pointer}button:hover,.filebtn:hover{background:#f1f2f4}button.primary{background:#292a2d;color:white;border-color:#292a2d}button.primary:hover{background:#444}
+main{max-width:1440px;margin:24px auto;padding:0 20px;display:grid;grid-template-columns:240px minmax(0,1fr) 250px;gap:18px}
+.panel,.workspace{background:#fff;border:1px solid #e8e9ec;border-radius:14px}
+.panel{padding:17px;height:max-content}.panel h2{font-size:14px;margin:0 0 15px}.section{margin-bottom:22px}.section:last-child{margin-bottom:0}
+.muted{color:#81838a;font-size:12px;line-height:1.5}.tilelist{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #e5e6e9;border-radius:9px;background:#fff;font-size:12px;cursor:pointer}
+.tile.active{border:2px solid #34363b;background:#f7f7f8;padding:8px}.swatch{width:23px;height:23px;border-radius:5px;border:1px solid #0001;flex:none}
+label{display:block;font-size:12px;color:#62646b;margin:0 0 6px}input[type=number],input[type=color]{width:100%;height:36px;border:1px solid #dedfe3;border-radius:8px;padding:6px;background:white;color:#333}
+input[type=range]{width:100%;accent-color:#333} .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{margin-bottom:12px}
+.workspace{padding:18px;min-width:0}.worktop{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.worktop strong{font-size:14px}.worktop span{font-size:12px;color:#85868b}
+.canvaswrap{background:#f0f1f3;border-radius:10px;min-height:500px;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
+canvas{display:block;max-width:100%;height:auto;box-shadow:0 5px 20px #20232a18;touch-action:none;background:white}
+.hint{font-size:12px;color:#85868b;margin-top:12px}
+.right-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.right-actions button{padding:10px 6px}
+hr{border:0;border-top:1px solid #eee;margin:16px 0}
+input[type=file]{display:none}
+@media(max-width:1000px){main{grid-template-columns:210px minmax(0,1fr)}.rightpanel{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.rightpanel h2{grid-column:1/-1}}
+@media(max-width:700px){header{height:auto;align-items:flex-start;gap:12px;padding:14px;flex-direction:column}.actions{width:100%}main{display:flex;flex-direction:column;padding:0 12px;margin:12px auto}.canvaswrap{min-height:300px;padding:12px}.rightpanel{display:block}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">MASQUERADE MAP MAKER <span>COCOfolia map tool</span></div>
+  <div class="actions">
+    <button id="undo">실행 취소</button><button id="redo">다시 실행</button>
+    <button id="new">새 맵</button>
+    <button id="save">JSON 저장</button>
+    <label class="filebtn" for="loadFile">JSON 불러오기</label><input id="loadFile" type="file" accept=".json,application/json">
+    <button class="primary" id="png">PNG 다운로드</button>
+  </div>
+</header>
+<main>
+  <aside class="panel">
+    <div class="section"><h2>타일 선택</h2><div class="tilelist" id="tilelist"></div><p class="muted">타일을 선택한 뒤 맵을 클릭하거나 드래그하세요.</p></div>
+    <hr>
+    <div class="section"><h2>직접 색상 지정</h2><label for="customColor">사용자 지정 타일 색상</label><input type="color" id="customColor" value="#d9d6ce"><button id="customTile" style="width:100%;margin-top:8px">이 색상으로 그리기</button></div>
+    <hr>
+    <div class="section"><h2>편집 도구</h2><div class="tilelist">
+      <button id="eraser">지우개</button><button id="fill">전체 채우기</button>
+      <button id="gridToggle">격자 표시 ON</button><button id="clear">전체 지우기</button>
+    </div></div>
+  </aside>
+  <section class="workspace">
+    <div class="worktop"><strong>맵 작업 공간</strong><span id="dimensions">9 × 9 타일</span></div>
+    <div class="canvaswrap"><canvas id="map" width="576" height="576"></canvas></div>
+    <div class="hint">마우스 왼쪽 버튼으로 타일을 배치하세요. 드래그하면 연속으로 그릴 수 있습니다.</div>
+  </section>
+  <aside class="panel rightpanel">
+    <div class="section"><h2>맵 크기</h2>
+      <div class="fields"><div class="field"><label for="cols">가로 타일 수</label><input id="cols" type="number" min="1" max="30" value="9"></div><div class="field"><label for="rows">세로 타일 수</label><input id="rows" type="number" min="1" max="30" value="9"></div></div>
+      <button id="resize" style="width:100%">크기 적용</button>
+    </div>
+    <div class="section"><h2>타일 크기</h2><label><span id="tileSizeText">64px</span></label><input id="tileSize" type="range" min="32" max="128" step="8" value="64"><p class="muted">PNG 출력 시 타일 한 칸의 픽셀 크기입니다.</p></div>
+    <div class="section"><h2>현재 맵 정보</h2><p class="muted" id="mapInfo">총 81칸 · 576 × 576px</p></div>
+    <div class="section"><h2>작업 보존</h2><p class="muted">작업 내용은 이 브라우저에 자동 저장됩니다. 다른 컴퓨터로 옮기려면 JSON 저장을 이용하세요.</p><button id="restore" style="width:100%">자동 저장 불러오기</button></div>
+  </aside>
+</main>
+<script>
+const palette=[
+ {id:"floor",name:"바닥",color:"#e8e4da"},
+ {id:"wall",name:"벽",color:"#777777"},
+ {id:"water",name:"물",color:"#a9c9d8"},
+ {id:"obstacle",name:"장애물",color:"#b8a18b"},
+ {id:"special",name:"특수 타일",color:"#ddc887"},
+ {id:"white",name:"빈 공간",color:"#ffffff"}
+];
+const canvas=document.getElementById("map"),ctx=canvas.getContext("2d");
+let cols=9,rows=9,tileSize=64,gridOn=true,selected="floor",tool="draw",cells=[],undoStack=[],redoStack=[],drawing=false,lastCell=-1;
+const $=id=>document.getElementById(id);
+function colorOf(id){return palette.find(p=>p.id===id)?.color||id||"#ffffff"}
+function makeCells(c,r,fill="floor"){return Array(c*r).fill(fill)}
+function snapshot(){undoStack.push(JSON.stringify({cols,rows,tileSize,cells}));if(undoStack.length>80)undoStack.shift();redoStack=[]}
+function draw(){
+ canvas.width=cols*tileSize;canvas.height=rows*tileSize;
+ ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
+ cells.forEach((id,i)=>{let x=(i%cols)*tileSize,y=Math.floor(i/cols)*tileSize;ctx.fillStyle=colorOf(id);ctx.fillRect(x,y,tileSize,tileSize)});
+ if(gridOn){ctx.strokeStyle="#8f909355";ctx.lineWidth=Math.max(1,tileSize/64);ctx.beginPath();for(let x=0;x<=cols;x++){ctx.moveTo(x*tileSize,0);ctx.lineTo(x*tileSize,rows*tileSize)}for(let y=0;y<=rows;y++){ctx.moveTo(0,y*tileSize);ctx.lineTo(cols*tileSize,y*tileSize)}ctx.stroke()}
+ $("dimensions").textContent=`${cols} × ${rows} 타일`;
+ $("mapInfo").textContent=`총 ${cols*rows}칸 · ${cols*tileSize} × ${rows*tileSize}px`;
+ $("tileSizeText").textContent=tileSize+"px";
+ localStorage.setItem("masquerade-map-autosave",JSON.stringify({cols,rows,tileSize,cells,gridOn}));
+}
+function renderPalette(){
+ $("tilelist").innerHTML="";
+ palette.forEach(p=>{let b=document.createElement("button");b.className="tile"+(selected===p.id?" active":"");b.innerHTML=`<span class="swatch" style="background:${p.color}"></span>${p.name}`;b.onclick=()=>{selected=p.id;tool="draw";renderPalette()};$("tilelist").appendChild(b)});
+}
+function applyCell(i){if(i<0||i>=cells.length||lastCell===i)return;lastCell=i;if(tool==="fill"){cells=makeCells(cols,rows,selected);draw();return}cells[i]=tool==="erase"?"#ffffff":selected;draw()}
+function pos(e){let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*(canvas.width/r.width),y=(e.clientY-r.top)*(canvas.height/r.height);return Math.floor(y/tileSize)*cols+Math.floor(x/tileSize)}
+canvas.addEventListener("pointerdown",e=>{drawing=true;lastCell=-1;canvas.setPointerCapture(e.pointerId);snapshot();applyCell(pos(e))});
+canvas.addEventListener("pointermove",e=>{if(drawing)applyCell(pos(e))});
+canvas.addEventListener("pointerup",()=>{drawing=false;lastCell=-1});
+canvas.addEventListener("pointercancel",()=>{drawing=false;lastCell=-1});
+$("resize").onclick=()=>{let c=Math.max(1,Math.min(30,Number($("cols").value)||9)),r=Math.max(1,Math.min(30,Number($("rows").value)||9));snapshot();let next=makeCells(c,r);for(let y=0;y<Math.min(rows,r);y++)for(let x=0;x<Math.min(cols,c);x++)next[y*c+x]=cells[y*cols+x];cols=c;rows=r;cells=next;draw()};
+$("tileSize").oninput=e=>{tileSize=Number(e.target.value);draw()};
+$("eraser").onclick=()=>{tool="erase";renderPalette()};
+$("fill").onclick=()=>{snapshot();cells=makeCells(cols,rows,selected);draw()};
+$("gridToggle").onclick=()=>{gridOn=!gridOn;$("gridToggle").textContent="격자 표시 "+(gridOn?"ON":"OFF");draw()};
+$("clear").onclick=()=>{snapshot();cells=makeCells(cols,rows,"#ffffff");draw()};
+$("customTile").onclick=()=>{selected=$("customColor").value;tool="draw";renderPalette()};
+$("undo").onclick=()=>{if(!undoStack.length)return;redoStack.push(JSON.stringify({cols,rows,tileSize,cells}));let s=JSON.parse(undoStack.pop());({cols,rows,tileSize,cells}=s);$("cols").value=cols;$("rows").value=rows;$("tileSize").value=tileSize;draw()};
+$("redo").onclick=()=>{if(!redoStack.length)return;undoStack.push(JSON.stringify({cols,rows,tileSize,cells}));let s=JSON.parse(redoStack.pop());({cols,rows,tileSize,cells}=s);$("cols").value=cols;$("rows").value=rows;$("tileSize").value=tileSize;draw()};
+$("new").onclick=()=>{if(!confirm("현재 작업을 지우고 새 맵을 만들까요?"))return;snapshot();cols=9;rows=9;tileSize=64;cells=makeCells(cols,rows);$("cols").value=9;$("rows").value=9;$("tileSize").value=64;draw()};
+$("png").onclick=()=>{let a=document.createElement("a");a.download=`masquerade-map-${cols}x${rows}.png`;a.href=canvas.toDataURL("image/png");a.click()};
+$("save").onclick=()=>{let data={app:"Masquerade Map Maker",version:1,cols,rows,tileSize,cells,gridOn};let blob=new Blob([JSON.stringify(data)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="masquerade-map.json";a.click();URL.revokeObjectURL(a.href)};
+$("loadFile").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let d=JSON.parse(await f.text());if(!Number.isInteger(d.cols)||!Number.isInteger(d.rows)||!Array.isArray(d.cells)||d.cells.length!==d.cols*d.rows)throw Error();snapshot();cols=Math.max(1,Math.min(30,d.cols));rows=Math.max(1,Math.min(30,d.rows));tileSize=Math.max(32,Math.min(128,d.tileSize||64));cells=d.cells.slice(0,cols*rows);gridOn=d.gridOn!==false;$("cols").value=cols;$("rows").value=rows;$("tileSize").value=tileSize;$("gridToggle").textContent="격자 표시 "+(gridOn?"ON":"OFF");draw()}catch{alert("올바른 맵 JSON 파일이 아닙니다.")}e.target.value=""};
+$("restore").onclick=()=>{let d=localStorage.getItem("masquerade-map-autosave");if(!d){alert("자동 저장된 맵이 없습니다.");return}try{let s=JSON.parse(d);({cols,rows,tileSize,cells,gridOn}=s);$("cols").value=cols;$("rows").value=rows;$("tileSize").value=tileSize;$("gridToggle").textContent="격자 표시 "+(gridOn?"ON":"OFF");draw()}catch{alert("자동 저장 파일을 읽지 못했습니다.")}};
+cells=makeCells(cols,rows);renderPalette();draw();
+</script>
+</body>
+</html>
