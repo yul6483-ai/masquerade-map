@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masquerade Map Maker</title>
+<style>
+:root {
+  --site-primary: #526b61;
+  --site-secondary: #e8eee9;
+  --site-background: #f5f6f3;
+  --site-on-primary: #ffffff;
+  --site-on-secondary: #26352e;
+  --site-on-background: #26312b;
+  --site-font-body: Inter, Pretendard, "Noto Sans KR", system-ui, sans-serif;
+  --site-font-heading: Inter, Pretendard, "Noto Sans KR", system-ui, sans-serif;
+  --site-heading-scale: 1;
+  --site-spacing-scale: 1;
+  --site-radius-scale: 1;
+  --site-decoration-opacity: 1;
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--site-font-body); background: var(--site-background); color: var(--site-on-background); }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+.app-root { min-height: 100vh; width: 100%; border-radius: 0; background-color: var(--site-background); color: var(--site-on-background); }
+.topbar { height: 68px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; background: var(--site-primary); color: var(--site-on-primary); gap: 16px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-mark { width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.55); border-radius: 10px; display:grid; place-items:center; font-weight:800; letter-spacing:-1px; }
+.brand-name { font-family: var(--site-font-heading); font-weight: 750; letter-spacing: -.035em; font-size: calc(18px * var(--site-heading-scale)); white-space: nowrap; }
+.brand-sub { opacity:.75; font-size:12px; margin-top:2px; }
+.top-actions { display:flex; align-items:center; gap:8px; }
+.btn { border:1px solid var(--line); border-radius: calc(10px * var(--site-radius-scale)); background:var(--surface); color:var(--text); padding:9px 13px; font-size:13px; font-weight:650; display:inline-flex; align-items:center; justify-content:center; gap:7px; transition:background .15s, transform .15s; white-space:nowrap; }
+.btn:hover { background:var(--hover); }
+.btn:active { transform:translateY(1px); }
+.btn.primary { background:var(--site-primary); border-color:var(--site-primary); color:var(--site-on-primary); }
+.btn.primary:hover { filter:brightness(1.08); }
+.btn.ghost-top { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.25); color:white; }
+.btn.ghost-top:hover { background:rgba(255,255,255,.2); }
+.btn.icon-only { width:36px; height:36px; padding:0; }
+.workspace { display:grid; grid-template-columns: 248px minmax(0,1fr) 252px; min-height:calc(100vh - 68px); }
+.sidebar { background:var(--panel); border-right:1px solid var(--line); padding:22px 17px; }
+.rightbar { border-left:1px solid var(--line); border-right:0; }
+.section-label { color:var(--muted); font-size:10px; letter-spacing:.12em; font-weight:800; margin:0 0 12px; }
+.panel-section { padding-bottom:21px; margin-bottom:20px; border-bottom:1px solid var(--line); }
+.panel-section:last-child { border:0; margin:0; }
+.tool-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.tool-wrap { position:relative; min-width:0; }
+.tool-wrap .tool { width:100%; height:100%; }
+.tool { position:relative; border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:12px; padding:11px 9px; min-height:74px; display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between; gap:8px; text-align:left; }
+.tool .swatch { width:24px; height:24px; border-radius:7px; border:1px solid rgba(0,0,0,.15); }
+.tool span:last-child { font-size:12px; font-weight:650; text-overflow:ellipsis; overflow:hidden; width:100%; white-space:nowrap; }
+.tool.active { border:1.5px solid var(--site-primary); box-shadow:0 0 0 2px color-mix(in srgb, var(--site-primary) 13%, transparent); background:var(--soft); }
+.tool-wrap .slot-action { position:absolute; top:4px; width:18px; height:18px; border-radius:50%; border:none; background:rgba(0,0,0,0.15); color:white; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer; z-index:1; opacity:0; pointer-events:none; transition:opacity .15s; }
+.tool-wrap .rename-slot { right:24px; }
+.tool-wrap .delete-slot { right:4px; }
+.tool-wrap:hover .slot-action, .tool-wrap:focus-within .slot-action { opacity:1; pointer-events:auto; }
+.tool-wrap .delete-slot:hover { background:#d9534f; }
+.color-row { display:flex; align-items:center; gap:10px; margin-top:13px; }
+input[type=color] { width:36px; height:34px; padding:2px; border:1px solid var(--line); border-radius:9px; background:var(--surface); cursor:pointer; }
+
+/* 슬라이더 초록색 통일 */
+input[type=range] { accent-color: var(--site-primary); }
+input[type=range]::-webkit-slider-thumb { background-color: var(--site-primary); }
+input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
+
+.small-note { color:var(--muted); font-size:11px; line-height:1.55; }
+.canvas-area { min-width:0; padding:25px clamp(16px,3vw,42px) 30px; display:flex; flex-direction:column; align-items:center; }
+.canvas-heading { width:min(100%, 820px); display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:18px; gap:16px; }
+.canvas-project-name { width:min(100%,520px); min-width:0; padding:0 0 5px; border:0; border-bottom:1px solid transparent; border-radius:0; outline:0; background:transparent; color:var(--text); font-family:var(--site-font-heading); font-size:calc(22px * var(--site-heading-scale)); font-weight:750; }
+.canvas-project-name:hover, .canvas-project-name:focus { border-bottom-color:var(--line); }
+.canvas-project-name:focus { border-bottom-color:var(--site-primary); }
+.canvas-controls { display:flex; gap:6px; }
+.saved-map-bar { width:100%; overflow-anchor:none; }
+.saved-map-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.saved-map-title { display:flex; align-items:center; gap:7px; min-width:0; }
+.saved-map-heading .section-label { margin:0; }
+.saved-map-count { display:grid; place-items:center; min-width:22px; height:20px; padding:0 6px; border-radius:10px; background:var(--soft); color:var(--muted); font-size:10px; font-variant-numeric:tabular-nums; }
+.saved-map-heading .btn { width:auto; padding:6px 9px; font-size:11px; }
+.canvas-frame { width:100%; max-width:820px; min-height:440px; display:flex; align-items:center; justify-content:center; padding:22px; border:1px solid var(--line); border-radius:18px; background:var(--surface); box-shadow:0 8px 28px rgba(34,47,39,.045); overflow:auto; }
+#mapCanvas { display:block; max-width:none; max-height:none; flex-shrink:0; width:auto; height:auto; touch-action:none; cursor:crosshair; image-rendering:pixelated; }
+.canvas-footer { width:min(100%,820px); display:flex; justify-content:space-between; align-items:center; margin-top:12px; color:var(--muted); font-size:11px; gap:10px; }
+.field { margin-bottom:14px; }
+.field label { display:flex; justify-content:space-between; font-size:12px; font-weight:650; margin-bottom:7px; }
+.field input[type=number], .field select { width:100%; border:1px solid var(--line); background:var(--surface); color:var(--text); padding:10px 11px; border-radius:9px; outline:none; }
+.field input:focus, .field select:focus { border-color:var(--site-primary); box-shadow:0 0 0 3px color-mix(in srgb, var(--site-primary) 12%, transparent); }
+.dimensions { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.range-row { display:flex; align-items:center; gap:10px; }
+.range-row input { flex:1; }
+.range-value { min-width:42px; text-align:right; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+.size-controls { display:grid; grid-template-columns:minmax(0,1fr) 76px; gap:10px; align-items:center; }
+.check-row { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text); margin-top:12px; }
+.check-row input { accent-color:var(--site-primary); }
+.stat-card { background:var(--soft); border-radius:11px; padding:12px; margin-top:14px; }
+.stat-number { font-size:19px; font-weight:750; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+.stat-caption { color:var(--muted); font-size:10px; margin-top:3px; }
+.notice { background:var(--soft); border:1px solid var(--line); border-radius:11px; padding:11px; font-size:11px; line-height:1.55; color:var(--muted); }
+.export-tools { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%,12px); background:#26352e; color:white; padding:11px 16px; border-radius:10px; font-size:12px; opacity:0; pointer-events:none; transition:.2s; z-index:10; box-shadow:0 8px 24px #0002; }
+.toast.show { opacity:1; transform:translate(-50%,0); }
+.rename-overlay { position:fixed; inset:0; z-index:20; display:grid; place-items:center; padding:16px; background:#0008; }
+.rename-overlay[hidden] { display:none; }
+.rename-dialog { width:min(360px,100%); padding:20px; border:1px solid var(--line); border-radius:10px; background:var(--surface); color:var(--text); box-shadow:0 12px 40px #0004; }
+.rename-dialog h2 { margin:0 0 16px; font-size:16px; }
+.rename-dialog label { display:block; margin-bottom:6px; font-size:12px; font-weight:650; }
+.rename-dialog input { width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); }
+.rename-dialog input:focus { outline:none; border-color:var(--site-primary); box-shadow:0 0 0 3px color-mix(in srgb,var(--site-primary) 12%,transparent); }
+.rename-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+.saved-map-list { display:grid; align-content:start; gap:7px; max-height:190px; overflow-y:auto; overflow-anchor:none; padding:1px 3px 1px 0; }
+.saved-map-list.is-empty { display:none; }
+.saved-map-item { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) 30px; gap:5px; align-items:center; }
+.saved-map-load { min-width:0; display:flex; align-items:center; gap:9px; padding:7px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); text-align:left; }
+.saved-map-load:hover { background:var(--hover); }
+.saved-map-preview { width:46px; height:38px; flex:none; border:1px solid var(--line); border-radius:4px; background:var(--soft); image-rendering:pixelated; }
+.saved-map-copy { min-width:0; display:grid; gap:3px; }
+.saved-map-name { overflow:hidden; font-size:12px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+.saved-map-meta { color:var(--muted); font-size:10px; }
+.saved-map-delete { align-self:center; width:30px; height:30px; padding:0; border:1px solid var(--line); border-radius:7px; background:var(--surface); color:var(--muted); }
+.saved-map-delete:hover { background:#d9534f; color:white; }
+.mobile-menu { display:none; }
+@media (prefers-color-scheme: dark) {
+  :root { --site-background:#171c19; --site-on-background:#e7eee9; --site-primary:#334a40; --site-secondary:#28372f; --site-on-secondary:#e7eee9; }
+  .app-root { --panel:#1d2420; --surface:#222b26; --soft:#29362f; --line:#35423a; --text:#e7eee9; --muted:#a1afa6; --hover:#2d3932; }
+  .canvas-frame { box-shadow:0 8px 28px #0002; }
+}
+@media (prefers-color-scheme: light) {
+  .app-root { --panel:#fbfcfa; --surface:#ffffff; --soft:#edf2ee; --line:#e2e8e3; --text:#26312b; --muted:#7b8980; --hover:#f1f5f1; }
+}
+@media (max-width: 980px) {
+  .workspace { grid-template-columns:220px minmax(0,1fr); }
+  .rightbar { grid-column:1 / -1; border-left:0; border-top:1px solid var(--line); display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+}
+@media (max-width: 680px) {
+  .topbar { height:auto; min-height:62px; padding:12px 15px; }
+  .brand-sub { display:none; }
+  .top-actions .btn span { display:none; }
+  .top-actions .btn { width:36px; height:36px; padding:0; }
+  .workspace { display:flex; flex-direction:column; }
+  .sidebar { border-right:0; border-bottom:1px solid var(--line); padding:15px; }
+  .tool-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .tool-wrap .slot-action { opacity:1; pointer-events:auto; }
+  .tool { min-height:62px; align-items:center; padding:7px 3px; }
+  .tool span:last-child { font-size:10px; }
+  .tool .swatch { width:20px; height:20px; }
+  .sidebar .panel-section { margin:0; padding:0; border:0; }
+  .sidebar .section-label { margin-bottom:9px; }
+  .canvas-area { padding:20px 12px; }
+  .canvas-heading { align-items:flex-start; }
+  .canvas-project-name { font-size:19px; }
+  .canvas-frame { min-height:300px; padding:10px; }
+  #mapCanvas { max-height:55vh; }
+  .rightbar { display:grid; grid-template-columns:1fr 1fr; padding:16px; gap:16px; }
+  .rightbar .panel-section { margin:0; padding:0; border:0; }
+}
+</style>
+</head>
+<body>
+<div class="app-root">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div><div class="brand-name">Masquerade Map Maker</div><div class="brand-sub">COCOfolia map studio</div></div>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost-top" id="newBtn" title="새 맵"><span>새 맵</span>＋</button>
+      <button class="btn ghost-top" id="saveBtn" title="맵과 저장 슬롯을 데이터 파일로 저장"><span>데이터 저장</span>↓</button>
+      <button class="btn ghost-top" id="loadBtn" title="데이터 파일 불러오기"><span>데이터 불러오기</span>↑</button>
+      <button class="btn" id="pngBtn" style="background:white;color:#34483e;border-color:white" title="PNG 다운로드"><span>PNG 내보내기</span>↗</button>
+      <input id="fileInput" type="file" accept=".json,application/json" hidden>
+    </div>
+  </header>
+  <main class="workspace">
+    <aside class="sidebar">
+      <section class="panel-section">
+        <div class="section-label">TILE PALETTE</div>
+        <div class="tool-grid" id="palette">
+          <button class="tool active" data-tool="floor" id="floorTool"><span class="swatch" id="floorSwatch" style="background:#e8e4d9"></span><span>기본 바닥</span></button>
+          <button class="tool" data-tool="erase"><span class="swatch" style="background:linear-gradient(135deg,#fff 45%,#d7dcd8 45%,#d7dcd8 55%,#fff 55%)"></span><span>타일만 지우개</span></button>
+          <button class="tool" data-tool="erase-all"><span class="swatch" style="background:linear-gradient(135deg,#fff 45%,#d9534f 45%,#d9534f 55%,#fff 55%)"></span><span>바닥까지 지우개</span></button>
+          <button class="tool" data-tool="current-color" id="currentColorTool"><span class="swatch" id="currentColorSwatch" style="background:#777b78"></span><span>현재 색상</span></button>
+        </div>
+        
+        <div class="color-row">
+          <input id="customColor" type="color" value="#777b78" aria-label="사용자 지정 색상">
+          <div>
+            <div style="font-size:12px;font-weight:650">색상 선택기</div>
+            <div class="small-note">원하는 색을 선택하세요</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">
+          <button class="btn" id="addSlotBtn" style="width:100%">팔레트에 색상 추가 ＋</button>
+          <button class="btn" id="applyFloorColor" style="width:100%">바닥 기본색으로 설정</button>
+        </div>
+      </section>
+      <section class="panel-section saved-map-bar">
+        <div class="saved-map-heading">
+          <div class="saved-map-title">
+            <div class="section-label">SAVED MAPS</div>
+            <span class="saved-map-count" id="savedMapCount" aria-label="저장된 맵 수">0</span>
+          </div>
+          <button class="btn primary" id="saveMapSlotBtn" type="button" title="현재 맵을 슬롯에 저장">＋ 저장</button>
+        </div>
+        <div class="saved-map-list" id="savedMapList" aria-live="polite"></div>
+        <div class="small-note" id="savedMapEmpty">저장한 맵이 여기에 표시됩니다.</div>
+      </section>
+      <section class="panel-section">
+        <div class="section-label">QUICK ACTIONS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn" id="undoBtn">↶ 실행 취소</button>
+          <button class="btn" id="redoBtn">↷ 다시 실행</button>
+          <button class="btn" id="fillBtn">전체 채우기</button>
+          <button class="btn" id="clearBtn">맵 비우기</button>
+        </div>
+      </section>
+      <div class="notice">타일을 클릭하거나 드래그해 칠할 수 있어요. 오른쪽 클릭은 위에 놓인 타일만 지웁니다.</div>
+    </aside>
+    <section class="canvas-area">
+      <div class="canvas-heading">
+        <input id="projectName" class="canvas-project-name" type="text" value="새로운 마스레이드 맵" aria-label="프로젝트 이름" placeholder="프로젝트 이름">
+        <div class="canvas-controls"><button class="btn icon-only" id="zoomOut" aria-label="축소">−</button><button class="btn" id="zoomLabel" style="min-width:58px">100%</button><button class="btn icon-only" id="zoomIn" aria-label="확대">＋</button></div>
+      </div>
+      <div class="canvas-frame"><canvas id="mapCanvas" width="576" height="576" aria-label="맵 편집 캔버스"></canvas></div>
+      <div class="canvas-footer"><span id="mapInfo">9 × 9 타일 · 576 × 576 px</span><span>자동 저장 사용 중</span></div>
+    </section>
+    <aside class="sidebar rightbar">
+      <section class="panel-section">
+        <div class="section-label">MAP SETTINGS</div>
+        <div class="dimensions">
+          <div class="field"><label for="mapW">가로 타일</label><input id="mapW" type="number" min="1" max="30" value="9"></div>
+          <div class="field"><label for="mapH">세로 타일</label><input id="mapH" type="number" min="1" max="30" value="9"></div>
+        </div>
+        <div class="field"><label for="tileSize">타일 한 칸 크기 <span id="tileSizeValue" style="color:var(--muted)">64 px</span></label><div class="size-controls"><input id="tileSize" type="range" min="32" max="128" step="1" value="64"><input id="tileSizeNumber" type="number" min="32" max="128" step="1" value="64" aria-label="타일 한 칸 크기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px)</div></div>
+        <div class="field"><label for="gridColor">격자선 색상</label><input id="gridColor" type="color" value="#c8c5bb" style="width:100%;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:3px"></div>
+        <div class="field"><label for="gridLineWidth">격자선 굵기 <span id="gridLineWidthValue" class="range-value">1 px</span></label><div class="size-controls"><input id="gridLineWidth" type="range" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 조절"><input id="gridLineWidthNumber" type="number" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px), 0.5–8</div></div>
+        <label class="check-row"><input id="showGrid" type="checkbox" checked> 격자선 표시</label>
+        <label class="check-row"><input id="transparentFloor" type="checkbox"> 바닥색 투명하게 출력</label>
+        <div class="export-tools">
+          <button class="btn" id="gridPngBtn">격자만 PNG</button>
+          <button class="btn" id="tilesPngBtn">타일만 PNG</button>
+        </div>
+        <div class="stat-card"><div class="stat-number" id="pixelSize">576 × 576</div><div class="stat-caption">PNG 출력 크기 (픽셀)</div></div>
+        <button class="btn primary" id="applySize" style="width:100%;margin-top:12px">맵 크기 적용</button>
+      </section>
+      <section class="panel-section">
+        <div class="section-label">REFERENCE IMAGE</div>
+        <input id="referenceInput" type="file" accept="image/*" hidden>
+        <button class="btn" id="referenceBtn" style="width:100%">이미지 불러오기</button>
+        <div class="field" style="margin-top:14px"><label for="imageOpacity">이미지 투명도 <span id="imageOpacityValue" style="color:var(--muted)">50%</span></label><div class="range-row"><input id="imageOpacity" type="range" min="0" max="100" value="50"><span class="range-value" id="imageOpacityOut">50%</span></div></div>
+        <button class="btn" id="removeReferenceBtn" style="width:100%">이미지 제거</button>
+        <div class="small-note" style="margin-top:8px">불러온 이미지는 맵 위에 반투명하게 표시되는 참고용 레이어예요. PNG 내보내기에는 포함되지 않아요.</div>
+      </section>
+    </aside>
+  </main>
+  <div class="rename-overlay" id="renameDialog" hidden>
+    <form class="rename-dialog" id="renameForm" role="dialog" aria-modal="true" aria-labelledby="renameTitle">
+      <h2 id="renameTitle">팔레트 이름 변경</h2>
+      <label for="renameInput">팔레트 이름</label>
+      <input id="renameInput" type="text" maxlength="32" autocomplete="off" required>
+      <div class="rename-actions">
+        <button class="btn" id="cancelRename" type="button">취소</button>
+        <button class="btn primary" type="submit">저장</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(() => {
+  const canvas = document.getElementById('mapCanvas');
+  const ctx = canvas.getContext('2d');
+  const $ = id => document.getElementById(id);
+  
+  let floorColor = '#e8e4d9';
+  let customSlots = []; // 사용자가 추가한 추가 색상 팔레트 슬롯 배열
+  let cols=9, rows=9, tileSize=64, gridColor='#c8c5bb', gridLineWidth=1, showGrid=true, transparentFloor=false, selected='floor', zoom=1, referenceImage=null, imageOpacity=.5;
+  let floors=Array(cols*rows).fill(true), tiles=Array(cols*rows).fill(null);
+  let renamingIndex=-1;
+  let savedMaps=[];
+  let history=[], future=[], drawing=false, lastCell=-1;
+
+  function snapshot(){
+    return {
+      cols, rows, tileSize, gridColor, gridLineWidth, showGrid, transparentFloor, floorColor, customSlots:customSlots.map(slot=>({...slot})),
+      floors:[...floors], tiles:[...tiles], projectName:$('projectName').value
+    };
+  }
+  function remember(){ history.push(snapshot()); if(history.length>80) history.shift(); future=[]; updateHistoryButtons(); }
+  function restore(s){
+    cols=s.cols; rows=s.rows; tileSize=s.tileSize; gridColor=s.gridColor; gridLineWidth=s.gridLineWidth ?? 1; showGrid=s.showGrid; transparentFloor=s.transparentFloor||false;
+    floorColor = s.floorColor || '#e8e4d9';
+    customSlots = (s.customSlots || []).map(slot=>typeof slot==='string'?{color:slot,name:slot}:{color:slot.color,name:slot.name||slot.color});
+    if(Array.isArray(s.floors)){
+      floors=[...s.floors];
+      tiles=[...s.tiles];
+    }else{
+      floors=s.tiles.map(tile=>tile!=='erase');
+      tiles=s.tiles.map(tile=>tile==='floor'||tile==='erase'?null:tile);
+    }
+    
+    $('mapW').value=cols; $('mapH').value=rows; $('tileSize').value=tileSize; $('tileSizeNumber').value=tileSize;
+    $('tileSizeValue').textContent=tileSize+' px'; $('gridColor').value=gridColor; $('gridLineWidth').value=gridLineWidth; $('gridLineWidthNumber').value=gridLineWidth; $('gridLineWidthValue').textContent=gridLineWidth+' px'; $('showGrid').checked=showGrid;
+    $('transparentFloor').checked=transparentFloor;
+    $('projectName').value=s.projectName||'새로운 마스레이드 맵';
+    $('floorSwatch').style.background = floorColor;
+    
+    renderPalette();
+    render();
+  }
+  
+  function updateHistoryButtons(){ $('undoBtn').disabled=!history.length; $('redoBtn').disabled=!future.length; }
+  function toast(message){ const el=$('toast'); el.textContent=message; el.classList.add('show'); clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.remove('show'),2100); }
+
+  function isHexColor(value){ return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value); }
+  function isValidProject(data){
+    return data && Number.isInteger(data.cols) && data.cols >= 1 && data.cols <= 30 &&
+      Number.isInteger(data.rows) && data.rows >= 1 && data.rows <= 30 &&
+      Number.isInteger(data.tileSize) && data.tileSize >= 32 && data.tileSize <= 128 &&
+      isHexColor(data.gridColor) && isHexColor(data.floorColor) &&
+      (data.gridLineWidth === undefined || (typeof data.gridLineWidth === 'number' && data.gridLineWidth >= 0.5 && data.gridLineWidth <= 8)) &&
+      Array.isArray(data.tiles) && data.tiles.length === data.cols * data.rows &&
+      (Array.isArray(data.floors)
+        ? data.floors.length === data.tiles.length && data.floors.every(floor => typeof floor === 'boolean') && data.tiles.every(tile => tile === null || isHexColor(tile))
+        : data.floors === undefined && data.tiles.every(tile => tile === 'floor' || tile === 'erase' || isHexColor(tile))) &&
+      (!data.customSlots || (Array.isArray(data.customSlots) && data.customSlots.every(slot=>isHexColor(slot)||(slot&&isHexColor(slot.color)&&typeof slot.name==='string')))) &&
+      (data.projectName === undefined || typeof data.projectName === 'string');
+  }
+
+  function isValidWorkspace(data){
+    return data && data.format==='masquerade-map-workspace' && data.version===1 &&
+      isValidProject(data.currentMap) && Array.isArray(data.savedMaps) && data.savedMaps.length<=20 &&
+      data.savedMaps.every(slot=>slot&&typeof slot.id==='string'&&typeof slot.savedAt==='number'&&isValidProject(slot.map));
+  }
+
+  function loadSavedMaps(){
+    try{
+      const saved=JSON.parse(localStorage.getItem('masqueradeMapMakerSlots')||'[]');
+      savedMaps=Array.isArray(saved)?saved.filter(slot=>slot&&typeof slot.id==='string'&&typeof slot.savedAt==='number'&&isValidProject(slot.map)):[];
+    }catch(e){savedMaps=[];}
+  }
+
+  function persistSavedMaps(){
+    try{
+      localStorage.setItem('masqueradeMapMakerSlots',JSON.stringify(savedMaps));
+      return true;
+    }catch(e){
+      toast('브라우저 저장 공간이 부족해 맵 슬롯을 저장하지 못했습니다.');
+      return false;
+    }
+  }
+
+  function renderSavedMaps(){
+    const list=$('savedMapList');
+    list.replaceChildren();
+    list.classList.toggle('is-empty',savedMaps.length===0);
+    $('savedMapCount').textContent=`${savedMaps.length}/20`;
+    $('savedMapCount').setAttribute('aria-label',`${savedMaps.length}개 저장됨`);
+    $('savedMapEmpty').hidden=savedMaps.length>0;
+    savedMaps.forEach(slot=>{
+      const item=document.createElement('div');
+      item.className='saved-map-item';
+      const loadButton=document.createElement('button');
+      loadButton.type='button';
+      loadButton.className='saved-map-load';
+      loadButton.title=`${slot.map.projectName||'새 맵'} 불러오기`;
+      const preview=document.createElement('canvas');
+      preview.className='saved-map-preview';
+      preview.width=92;
+      preview.height=76;
+      preview.setAttribute('aria-hidden','true');
+      const previewContext=preview.getContext('2d');
+      const map=slot.map;
+      const cellSize=Math.min(88/map.cols,72/map.rows);
+      const mapWidth=cellSize*map.cols;
+      const mapHeight=cellSize*map.rows;
+      const offsetX=(92-mapWidth)/2;
+      const offsetY=(76-mapHeight)/2;
+      previewContext.fillStyle='#e7eae7';
+      previewContext.fillRect(0,0,92,76);
+      map.tiles.forEach((tile,index)=>{
+        const x=offsetX+(index%map.cols)*cellSize;
+        const y=offsetY+Math.floor(index/map.cols)*cellSize;
+        if(map.floors?.[index]&&!map.transparentFloor){previewContext.fillStyle=map.floorColor;previewContext.fillRect(x,y,cellSize,cellSize);}
+        if(tile){previewContext.fillStyle=tile;previewContext.fillRect(x,y,cellSize,cellSize);}
+      });
+      if(map.showGrid){
+        previewContext.strokeStyle=map.gridColor;
+        previewContext.lineWidth=Math.max(.5,map.gridLineWidth*cellSize/map.tileSize);
+        for(let col=0;col<=map.cols;col++){
+          const x=offsetX+col*cellSize;
+          previewContext.beginPath();previewContext.moveTo(x,offsetY);previewContext.lineTo(x,offsetY+mapHeight);previewContext.stroke();
+        }
+        for(let row=0;row<=map.rows;row++){
+          const y=offsetY+row*cellSize;
+          previewContext.beginPath();previewContext.moveTo(offsetX,y);previewContext.lineTo(offsetX+mapWidth,y);previewContext.stroke();
+        }
+      }
+      const copy=document.createElement('span');
+      copy.className='saved-map-copy';
+      const name=document.createElement('span');
+      name.className='saved-map-name';
+      name.textContent=slot.map.projectName||'새 맵';
+      const meta=document.createElement('span');
+      meta.className='saved-map-meta';
+      meta.textContent=`${map.cols} × ${map.rows} · ${new Date(slot.savedAt).toLocaleString()}`;
+      copy.append(name,meta);
+      loadButton.append(preview,copy);
+      loadButton.addEventListener('click',()=>{
+        remember();
+        restore(slot.map);
+        saveLocal();
+        toast(`'${slot.map.projectName||'새 맵'}' 맵을 불러왔어요.`);
+      });
+      const deleteButton=document.createElement('button');
+      deleteButton.type='button';
+      deleteButton.className='saved-map-delete';
+      deleteButton.title='저장 슬롯 삭제';
+      deleteButton.setAttribute('aria-label',`${slot.map.projectName||'새 맵'} 슬롯 삭제`);
+      deleteButton.textContent='×';
+      deleteButton.addEventListener('click',()=>{
+        savedMaps=savedMaps.filter(saved=>saved.id!==slot.id);
+        if(persistSavedMaps())renderSavedMaps();
+      });
+      item.append(loadButton,deleteButton);
+      list.appendChild(item);
+    });
+  }
+
+  function saveMapSlot(){
+    const scrollPosition={left:window.scrollX,top:window.scrollY};
+    const map=snapshot();
+    savedMaps.unshift({id:`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`,savedAt:Date.now(),map});
+    if(savedMaps.length>20)savedMaps.length=20;
+    if(persistSavedMaps()){
+      renderSavedMaps();
+      requestAnimationFrame(()=>window.scrollTo(scrollPosition.left,scrollPosition.top));
+      toast('현재 맵을 브라우저 슬롯에 저장했어요.');
+    }
+  }
+
+  function renderPalette() {
+    const palette = $('palette');
+    const existingSlots = palette.querySelectorAll('.tool-wrap[data-custom="true"]');
+    existingSlots.forEach(el => el.remove());
+
+    customSlots.forEach(({color,name}, idx) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'tool-wrap';
+      wrapper.dataset.custom = 'true';
+      const btn = document.createElement('button');
+      btn.className = 'tool' + (selected === color ? ' active' : '');
+      btn.dataset.tool = color;
+      btn.title = `${name} (${color})`;
+      btn.setAttribute('aria-label', `${name}, ${color}`);
+      const swatch = document.createElement('span');
+      swatch.className = 'swatch';
+      swatch.style.backgroundColor = color;
+      const label = document.createElement('span');
+      label.textContent = name;
+      btn.append(swatch, label);
+      btn.addEventListener('click', () => choose(color));
+
+      const renameButton = document.createElement('button');
+      renameButton.className = 'slot-action rename-slot';
+      renameButton.type = 'button';
+      renameButton.title = '팔레트 이름 바꾸기';
+      renameButton.setAttribute('aria-label', `${name} 이름 바꾸기`);
+      renameButton.textContent = '✎';
+      renameButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        renameSlot(idx);
+      });
+
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'slot-action delete-slot';
+      deleteButton.type = 'button';
+      deleteButton.title = '슬롯 삭제';
+      deleteButton.setAttribute('aria-label', `${color} 슬롯 삭제`);
+      deleteButton.textContent = '×';
+      deleteButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeSlot(idx);
+      });
+
+      wrapper.append(btn, renameButton, deleteButton);
+      palette.appendChild(wrapper);
+    });
+
+    document.querySelectorAll('.tool').forEach(b => {
+      b.classList.toggle('active', b.dataset.tool === selected);
+    });
+  }
+
+  function addSlot(color) {
+    if (customSlots.some(slot=>slot.color===color)) {
+      toast('이미 팔레트에 등록된 색상입니다.');
+      choose(color);
+      return;
+    }
+    customSlots.push({color,name:color});
+    renderPalette();
+    choose(color);
+    saveLocal();
+    toast('팔레트에 새 색상을 추가했습니다.');
+  }
+
+  function removeSlot(index) {
+    const removedColor = customSlots[index];
+    customSlots.splice(index, 1);
+    if (selected === removedColor.color) {
+      choose('floor');
+    }
+    renderPalette();
+    saveLocal();
+    toast('팔레트 슬롯을 삭제했습니다.');
+  }
+
+  function renameSlot(index){
+    const slot=customSlots[index];
+    renamingIndex=index;
+    $('renameInput').value=slot.name;
+    $('renameDialog').hidden=false;
+    $('renameInput').focus();
+    $('renameInput').select();
+  }
+
+  function closeRenameDialog(){
+    const index=renamingIndex;
+    renamingIndex=-1;
+    $('renameDialog').hidden=true;
+    $('palette').querySelectorAll('.tool-wrap .tool')[index]?.focus();
+  }
+
+  $('renameForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const name=$('renameInput').value.trim().slice(0,32);
+    if(!name){$('renameInput').focus();return;}
+    if(renamingIndex<0||!customSlots[renamingIndex])return;
+    const index=renamingIndex;
+    customSlots[index].name=name;
+    $('renameDialog').hidden=true;
+    renamingIndex=-1;
+    renderPalette();
+    $('palette').querySelectorAll('.tool-wrap .tool')[index]?.focus();
+    saveLocal();
+    toast('팔레트 이름을 변경했습니다.');
+  });
+  $('cancelRename').addEventListener('click',closeRenameDialog);
+  $('renameDialog').addEventListener('click',e=>{if(e.target===$('renameDialog'))closeRenameDialog();});
+  $('renameInput').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeRenameDialog();}});
+
+  function drawTiles(targetContext){
+    tiles.forEach((tile,i)=>{
+      const x=(i%cols)*tileSize, y=Math.floor(i/cols)*tileSize;
+      if(floors[i] && !transparentFloor){
+        targetContext.fillStyle=floorColor;
+        targetContext.fillRect(x,y,tileSize,tileSize);
+      }
+      if(tile){
+        targetContext.fillStyle=tile;
+        targetContext.fillRect(x,y,tileSize,tileSize);
+      }
+    });
+  }
+
+  function drawGrid(targetContext,width,height){
+    targetContext.fillStyle=gridColor;
+    for(let col=0;col<=cols;col++){
+      const x=col===0?0:col===cols?width-gridLineWidth:col*tileSize-gridLineWidth/2;
+      targetContext.fillRect(x,0,gridLineWidth,height);
+    }
+    for(let row=0;row<=rows;row++){
+      const y=row===0?0:row===rows?height-gridLineWidth:row*tileSize-gridLineWidth/2;
+      targetContext.fillRect(0,y,width,gridLineWidth);
+    }
+  }
+
+  function render(){
+    const width=cols*tileSize, height=rows*tileSize;
+    canvas.width=width; canvas.height=height;
+    const frame=canvas.parentElement;
+    const frameStyle=getComputedStyle(frame);
+    const availableWidth=frame.clientWidth-parseFloat(frameStyle.paddingLeft)-parseFloat(frameStyle.paddingRight);
+    const previewHeight=Math.min(window.innerHeight*.66,680);
+    const previewScale=Math.min(1,availableWidth/(cols*64),previewHeight/(rows*64))*zoom;
+    canvas.style.width=(cols*64*previewScale)+'px'; canvas.style.height=(rows*64*previewScale)+'px';
+    ctx.clearRect(0,0,width,height);
+    
+    drawTiles(ctx);
+
+    if(referenceImage){ctx.save();ctx.globalAlpha=imageOpacity;ctx.drawImage(referenceImage,0,0,width,height);ctx.restore();}
+    if(showGrid)drawGrid(ctx,width,height);
+    $('mapInfo').textContent=`${cols} × ${rows} 타일 · ${width} × ${height} px`;
+    $('pixelSize').textContent=`${width} × ${height}`;
+    $('zoomLabel').textContent=Math.round(zoom*100)+'%';
+  }
+
+  function choose(tool){
+    selected=tool;
+    document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
+    if(tool !== 'erase' && tool !== 'erase-all' && tool !== 'floor' && tool !== 'current-color') {
+      $('customColor').value = tool;
+      $('currentColorSwatch').style.backgroundColor = tool;
+    }
+  }
+
+  function applyTool(index, tool){
+    if(tool==='floor'){
+      floors[index]=true;
+      tiles[index]=null;
+    }else if(tool==='erase'){
+      tiles[index]=null;
+    }else if(tool==='erase-all'){
+      floors[index]=false;
+      tiles[index]=null;
+    }else{
+      tiles[index]=tool==='current-color' ? $('customColor').value : tool;
+    }
+  }
+
+  function paint(index, tool=selected){
+    if(index<0||index>=tiles.length||index===lastCell)return;
+    applyTool(index,tool);
+    lastCell=index;
+  }
+
+  function cellFromEvent(e){
+    const rect=canvas.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*(canvas.width/rect.width);
+    const y=(e.clientY-rect.top)*(canvas.height/rect.height);
+    const c=Math.floor(x/tileSize), r=Math.floor(y/tileSize);
+    return (c>=0&&c<cols&&r>=0&&r<rows)?r*cols+c:-1;
+  }
+
+  canvas.addEventListener('pointerdown',e=>{ if(e.button!==0)return; e.preventDefault(); remember(); drawing=true; lastCell=-1; paint(cellFromEvent(e)); render(); canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove',e=>{ if(!drawing)return; const before=lastCell; paint(cellFromEvent(e)); if(before!==lastCell)render(); });
+  canvas.addEventListener('pointerup',()=>{drawing=false;lastCell=-1;saveLocal();});
+  canvas.addEventListener('pointercancel',()=>{drawing=false;lastCell=-1;});
+  canvas.addEventListener('contextmenu',e=>{e.preventDefault(); const idx=cellFromEvent(e); if(idx>=0){remember();tiles[idx]=null;render();saveLocal();}});
+  window.addEventListener('resize',render);
+
+  $('floorTool').addEventListener('click', () => choose('floor'));
+  document.querySelector('[data-tool="erase"]').addEventListener('click', () => choose('erase'));
+  document.querySelector('[data-tool="erase-all"]').addEventListener('click', () => choose('erase-all'));
+  $('currentColorTool').addEventListener('click', () => choose('current-color'));
+  $('customColor').addEventListener('input',e=>{
+    $('currentColorSwatch').style.backgroundColor=e.target.value;
+    choose('current-color');
+  });
+
+  $('applyFloorColor').addEventListener('click',()=>{
+    remember();
+    floorColor = $('customColor').value;
+    $('floorSwatch').style.background = floorColor;
+    render();
+    saveLocal();
+    toast('기본 바닥 타일 색을 변경했습니다.');
+  });
+
+  $('applySize').addEventListener('click',()=>{ const nw=Math.max(1,Math.min(30,parseInt($('mapW').value)||1)); const nh=Math.max(1,Math.min(30,parseInt($('mapH').value)||1)); remember(); const nextTiles=Array(nw*nh).fill(null), nextFloors=Array(nw*nh).fill(true); for(let y=0;y<Math.min(rows,nh);y++)for(let x=0;x<Math.min(cols,nw);x++){nextTiles[y*nw+x]=tiles[y*cols+x];nextFloors[y*nw+x]=floors[y*cols+x];} cols=nw;rows=nh;tiles=nextTiles;floors=nextFloors;render();saveLocal();toast('맵 크기를 적용했어요.'); });
+  function setTileSize(value){tileSize=Math.max(32,Math.min(128,Math.round(Number(value)||64)));$('tileSize').value=tileSize;$('tileSizeNumber').value=tileSize;$('tileSizeValue').textContent=tileSize+' px';render();}
+  $('tileSize').addEventListener('input',e=>setTileSize(e.target.value));
+  $('tileSizeNumber').addEventListener('input',e=>{if(e.target.value==='')return;setTileSize(e.target.value);});
+  $('tileSizeNumber').addEventListener('change',()=>{setTileSize($('tileSizeNumber').value);saveLocal();});
+  $('tileSize').addEventListener('change',()=>{saveLocal();});
+
+  $('gridColor').addEventListener('input',e=>{gridColor=e.target.value;render();saveLocal();});
+  function setGridLineWidth(value){const parsed=Number(value);gridLineWidth=Math.max(.5,Math.min(8,Math.round((Number.isFinite(parsed)?parsed:1)*2)/2));$('gridLineWidth').value=gridLineWidth;$('gridLineWidthNumber').value=gridLineWidth;$('gridLineWidthValue').textContent=gridLineWidth+' px';render();}
+  $('gridLineWidth').addEventListener('input',e=>{setGridLineWidth(e.target.value);saveLocal();});
+  $('gridLineWidthNumber').addEventListener('input',e=>{if(e.target.value==='')return;setGridLineWidth(e.target.value);saveLocal();});
+  $('gridLineWidthNumber').addEventListener('change',()=>{setGridLineWidth($('gridLineWidthNumber').value);saveLocal();});
+  $('showGrid').addEventListener('change',e=>{showGrid=e.target.checked;render();saveLocal();});
+  $('transparentFloor').addEventListener('change',e=>{transparentFloor=e.target.checked;render();saveLocal();});
+  $('referenceBtn').addEventListener('click',()=>$('referenceInput').click());
+  $('referenceInput').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{referenceImage=img;render();toast('참고 이미지를 불러왔어요.');};img.src=reader.result;};reader.readAsDataURL(file);e.target.value='';});
+  $('imageOpacity').addEventListener('input',e=>{imageOpacity=Number(e.target.value)/100;$('imageOpacityValue').textContent=e.target.value+'%';$('imageOpacityOut').textContent=e.target.value+'%';render();});
+  $('removeReferenceBtn').addEventListener('click',()=>{referenceImage=null;render();toast('참고 이미지를 제거했어요.');});
+  $('zoomIn').addEventListener('click',()=>{zoom=Math.min(1.6,+(zoom+.1).toFixed(2));render();});
+  $('zoomOut').addEventListener('click',()=>{zoom=Math.max(.5,+(zoom-.1).toFixed(2));render();});
+  $('zoomLabel').addEventListener('click',()=>{zoom=1;render();});
+  $('undoBtn').addEventListener('click',()=>{if(!history.length)return;future.push(snapshot());restore(history.pop());updateHistoryButtons();saveLocal();});
+  $('redoBtn').addEventListener('click',()=>{if(!future.length)return;history.push(snapshot());restore(future.pop());updateHistoryButtons();saveLocal();});
+  $('fillBtn').addEventListener('click',()=>{remember();for(let i=0;i<tiles.length;i++)applyTool(i,selected);render();saveLocal();});
+  $('clearBtn').addEventListener('click',()=>{remember();floors=floors.map(()=>false);tiles=tiles.map(()=>null);render();saveLocal();toast('맵을 비웠어요.');});
+  $('newBtn').addEventListener('click',()=>{if(!confirm('새 맵을 만들까요? 현재 작업은 자동 저장되어 있어요.'))return;remember();cols=9;rows=9;tileSize=64;floorColor='#e8e4d9';$('floorSwatch').style.background=floorColor;customSlots=[];floors=Array(81).fill(true);tiles=Array(81).fill(null);$('mapW').value=9;$('mapH').value=9;$('tileSize').value=64;$('tileSizeNumber').value=64;$('tileSizeValue').textContent='64 px';$('projectName').value='새로운 마스레이드 맵';zoom=1;renderPalette();render();saveLocal();toast('새 맵을 만들었어요.');});
+  
+  function saveLocal(){try{localStorage.setItem('masqueradeMapMaker',JSON.stringify(snapshot()));}catch(e){}}
+  function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  $('saveBtn').addEventListener('click',()=>{
+    const data={format:'masquerade-map-workspace',version:1,exportedAt:Date.now(),currentMap:snapshot(),savedMaps};
+    download(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),safeName()+'-workspace.json');
+    toast('현재 맵과 저장 슬롯을 데이터 파일로 저장했어요.');
+  });
+  $('saveMapSlotBtn').addEventListener('click',saveMapSlot);
+  $('loadBtn').addEventListener('click',()=>$('fileInput').click());
+  $('fileInput').addEventListener('change',async e=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    try{
+      const data=JSON.parse(await file.text());
+      if(isValidWorkspace(data)){
+        if(!confirm('현재 맵을 파일의 맵으로 바꾸고, 브라우저 저장 슬롯을 파일에 담긴 목록으로 교체할까요?'))return;
+        remember();
+        restore(data.currentMap);
+        savedMaps=data.savedMaps;
+        saveLocal();
+        persistSavedMaps();
+        renderSavedMaps();
+        toast('맵과 저장 슬롯을 데이터 파일에서 불러왔어요.');
+      }else if(isValidProject(data)){
+        remember();
+        restore(data);
+        saveLocal();
+        toast('맵 파일을 불러왔어요.');
+      }else{
+        throw new Error('invalid');
+      }
+    }catch(err){
+      alert('올바른 마스레이드 맵 데이터 파일이 아니에요.');
+    }finally{
+      e.target.value='';
+    }
+  });
+  
+  function exportLayer(mode){
+    const out=document.createElement('canvas');
+    out.width=cols*tileSize; out.height=rows*tileSize;
+    const c=out.getContext('2d');
+    if(mode!=='grid')drawTiles(c);
+    if(mode!=='tiles')drawGrid(c,out.width,out.height);
+    out.toBlob(blob=>{if(blob){download(blob,safeName()+'-'+mode+'.png');toast('PNG 이미지를 저장했어요.');}},'image/png');
+  }
+
+  $('pngBtn').addEventListener('click',()=>exportLayer('all'));
+  $('gridPngBtn').addEventListener('click',()=>exportLayer('grid'));
+  $('tilesPngBtn').addEventListener('click',()=>exportLayer('tiles'));
+  function safeName(){return ($('projectName').value.trim()||'masquerade-map').replace(/[\\/:*?"<>|]/g,'_').slice(0,60);}
+  let saveTimer; $('projectName').addEventListener('input',()=>{clearTimeout(saveTimer);saveTimer=setTimeout(saveLocal,250);});
+  
+  try{
+    const saved=localStorage.getItem('masqueradeMapMaker');
+    if(saved){
+      const data=JSON.parse(saved);
+      if(isValidProject(data)) restore(data);
+    }
+  }catch(e){}
+
+  loadSavedMaps();
+  renderSavedMaps();
+  
+  choose('floor');
+  render();
+  updateHistoryButtons();
+})();
+</script>
+</body>
+</html>
