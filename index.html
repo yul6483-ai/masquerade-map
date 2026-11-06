@@ -647,6 +647,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     $('currentColorSwatch').style.backgroundColor=e.target.value;
     choose('current-color');
   });
+  $('addSlotBtn').addEventListener('click',()=>addSlot($('customColor').value));
 
   $('applyFloorColor').addEventListener('click',()=>{
     remember();
