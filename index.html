@@ -241,6 +241,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
       <section class="panel-section">
         <div class="section-label">GRID LINES</div>
         <div class="field"><label for="gridColor">격자선 색상</label><input id="gridColor" type="color" value="#c8c5bb" style="width:100%;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:3px"></div>
+        <div class="field"><label for="gridLineWidth">격자선 굵기 <span id="gridLineWidthValue" class="range-value">1 px</span></label><div class="size-controls"><input id="gridLineWidth" type="range" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 조절"><input id="gridLineWidthNumber" type="number" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px), 0.5–8</div></div>
         <div class="field"><label for="gridSegmentColor">부분 격자선 색상</label><input id="gridSegmentColor" type="color" value="#d9534f" style="width:100%;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:3px"></div>
         <button class="btn" id="gridSegmentTool" type="button" aria-pressed="false" style="width:100%">격자선 부분 변경</button>
         <button class="btn" id="gridSegmentEraser" type="button" aria-pressed="false" style="width:100%;margin-top:7px">격자선 지우개</button>
@@ -248,11 +249,8 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
           <button class="btn" id="recolorGridSegmentsBtn" type="button">부분색 일괄 변경</button>
           <button class="btn" id="clearGridSegmentsBtn" type="button">기본색으로 변경</button>
         </div>
-        <div class="field" style="margin-top:14px"><label for="gridSegmentWidth">부분선 굵기 <span id="gridSegmentWidthValue" class="range-value">1 px</span></label><div class="size-controls"><input id="gridSegmentWidth" type="range" min="0.5" max="8" step="0.5" value="1" aria-label="부분 격자선 굵기 조절"><input id="gridSegmentWidthNumber" type="number" min="0.5" max="8" step="0.5" value="1" aria-label="부분 격자선 굵기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px), 0.5–8</div></div>
-        <button class="btn" id="gridSegmentWidthTool" type="button" aria-pressed="false" style="width:100%">부분선 굵기 변경</button>
-        <div class="small-note" style="margin-top:7px">굵기 변경 도구를 선택한 뒤 선분을 클릭하거나 드래그하세요. 우클릭하면 해당 선분의 굵기가 기본값으로 돌아갑니다.</div>
-        <div class="small-note" style="margin-top:7px">부분 변경·지우개 도구는 클릭하거나 같은 방향으로 드래그할 수 있어요. 우클릭으로 해당 선분을 기본 상태로 되돌립니다. 실행 취소는 한 번의 클릭·드래그 전체를 되돌립니다.</div>
-        <div class="field"><label for="gridLineWidth">격자선 굵기 <span id="gridLineWidthValue" class="range-value">1 px</span></label><div class="size-controls"><input id="gridLineWidth" type="range" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 조절"><input id="gridLineWidthNumber" type="number" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px), 0.5–8</div></div>
+        <div class="field" style="margin-top:14px"><label for="gridSegmentWidth">부분 격자선 굵기 <span id="gridSegmentWidthValue" class="range-value">1 px</span></label><div class="size-controls"><input id="gridSegmentWidth" type="range" min="0.5" max="8" step="0.5" value="1" aria-label="부분 격자선 굵기 조절"><input id="gridSegmentWidthNumber" type="number" min="0.5" max="8" step="0.5" value="1" aria-label="부분 격자선 굵기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px), 0.5–8 · 색칠된 부분선에 실시간 적용</div></div>
+        <div class="small-note" style="margin-top:7px">선분 위에 포인터를 올리면 미리 볼 수 있어요. 부분선 굵기를 바꾸면 색칠된 모든 선분에 바로 적용됩니다. 우클릭하면 선분을 기본색·굵기로 되돌립니다.</div>
         <label class="check-row"><input id="showGrid" type="checkbox" checked> 격자선 표시</label>
       </section>
       <section class="panel-section">
@@ -292,7 +290,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   let verticalGridWidths=Array((cols+1)*rows).fill(null), horizontalGridWidths=Array((rows+1)*cols).fill(null);
   let renamingIndex=-1;
   let savedMaps=[];
-  let history=[], future=[], drawing=false, drawingGridLines=false, gridSegmentToolActive=false, gridSegmentMode='paint', gridStrokeRemembered=false, drawingGridDirection=null, lastCell=-1, lastGridSegment=null;
+  let history=[], future=[], drawing=false, drawingGridLines=false, gridSegmentToolActive=false, gridSegmentMode='paint', gridStrokeRemembered=false, drawingGridDirection=null, lastCell=-1, lastGridSegment=null, lastGridPointer=null, hoveredGridSegment=null;
 
   function snapshot(){
     return {
@@ -308,6 +306,8 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     horizontalGridColors=Array.isArray(s.horizontalGridColors)?[...s.horizontalGridColors]:Array((rows+1)*cols).fill(null);
     verticalGridWidths=Array.isArray(s.verticalGridWidths)?[...s.verticalGridWidths]:Array((cols+1)*rows).fill(null);
     horizontalGridWidths=Array.isArray(s.horizontalGridWidths)?[...s.horizontalGridWidths]:Array((rows+1)*cols).fill(null);
+    verticalGridWidths=verticalGridWidths.map((width,index)=>verticalGridColors[index]?width:null);
+    horizontalGridWidths=horizontalGridWidths.map((width,index)=>horizontalGridColors[index]?width:null);
     floorColor = s.floorColor || '#e8e4d9';
     customSlots = (s.customSlots || []).map(slot=>typeof slot==='string'?{color:slot,name:slot}:{color:slot.color,name:slot.name||slot.color});
     if(Array.isArray(s.floors)){
@@ -320,6 +320,8 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     
     $('mapW').value=cols; $('mapH').value=rows; $('tileSize').value=tileSize; $('tileSizeNumber').value=tileSize;
     $('tileSizeValue').textContent=tileSize+' px'; $('gridColor').value=gridColor; $('gridSegmentColor').value=gridSegmentColor; $('gridLineWidth').value=gridLineWidth; $('gridLineWidthNumber').value=gridLineWidth; $('gridLineWidthValue').textContent=gridLineWidth+' px'; $('showGrid').checked=showGrid;
+    const savedSegmentWidth=[...verticalGridWidths,...horizontalGridWidths].find(width=>width!==null)??gridLineWidth;
+    $('gridSegmentWidth').value=savedSegmentWidth; $('gridSegmentWidthNumber').value=savedSegmentWidth; $('gridSegmentWidthValue').textContent=savedSegmentWidth+' px';
     $('transparentFloor').checked=transparentFloor;
     $('projectName').value=s.projectName||'새로운 마스레이드 맵';
     $('floorSwatch').style.background = floorColor;
@@ -409,17 +411,9 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
         if(tile){previewContext.fillStyle=tile;previewContext.fillRect(x,y,cellSize,cellSize);}
       });
       if(map.showGrid){
-        previewContext.strokeStyle=map.gridColor;
-        previewContext.lineWidth=Math.max(.5,map.gridLineWidth*cellSize/map.tileSize);
-        for(let col=0;col<=map.cols;col++){
-          const x=offsetX+col*cellSize;
-          previewContext.beginPath();previewContext.moveTo(x,offsetY);previewContext.lineTo(x,offsetY+mapHeight);previewContext.stroke();
-        }
-        for(let row=0;row<=map.rows;row++){
-          const y=offsetY+row*cellSize;
-          previewContext.beginPath();previewContext.moveTo(offsetX,y);previewContext.lineTo(offsetX+mapWidth,y);previewContext.stroke();
-        }
-        drawGridSegments(previewContext,map.cols,map.rows,cellSize,mapWidth,mapHeight,Math.max(.5,map.gridLineWidth*cellSize/map.tileSize),map.verticalGridColors,map.horizontalGridColors,offsetX,offsetY,map.verticalGridWidths,map.horizontalGridWidths,map.gridColor);
+        const previewScale=cellSize/map.tileSize;
+        const previewLineWidth=Math.max(.5,map.gridLineWidth*previewScale);
+        drawGridSegments(previewContext,map.cols,map.rows,cellSize,mapWidth,mapHeight,previewLineWidth,map.verticalGridColors,map.horizontalGridColors,offsetX,offsetY,map.verticalGridWidths?.map(width=>width===null?null:width*previewScale),map.horizontalGridWidths?.map(width=>width===null?null:width*previewScale),map.gridColor);
       }
       const copy=document.createElement('span');
       copy.className='saved-map-copy';
@@ -590,38 +584,44 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   }
 
   function drawGrid(targetContext,width,height){
-    targetContext.fillStyle=gridColor;
-    for(let col=0;col<=cols;col++){
-      const x=col===0?0:col===cols?width-gridLineWidth:col*tileSize-gridLineWidth/2;
-      targetContext.fillRect(x,0,gridLineWidth,height);
-    }
-    for(let row=0;row<=rows;row++){
-      const y=row===0?0:row===rows?height-gridLineWidth:row*tileSize-gridLineWidth/2;
-      targetContext.fillRect(0,y,width,gridLineWidth);
-    }
     drawGridSegments(targetContext,cols,rows,tileSize,width,height,gridLineWidth,verticalGridColors,horizontalGridColors,0,0,verticalGridWidths,horizontalGridWidths,gridColor);
   }
 
   function drawGridSegments(targetContext,gridCols,gridRows,cellSize,width,height,lineWidth,verticalColors,horizontalColors,offsetX=0,offsetY=0,verticalWidths=[],horizontalWidths=[],baseColor='#000000'){
-    if(!Array.isArray(verticalColors)||!Array.isArray(horizontalColors))return;
+    function drawVertical(row,col,index,color){
+      const segmentWidth=verticalWidths?.[index]||lineWidth;
+      const x=col===0?0:col===gridCols?width-segmentWidth:col*cellSize-segmentWidth/2;
+      targetContext.fillStyle=color;
+      targetContext.fillRect(offsetX+x,offsetY+row*cellSize,segmentWidth,cellSize);
+    }
+    function drawHorizontal(row,col,index,color){
+      const segmentWidth=horizontalWidths?.[index]||lineWidth;
+      const y=row===0?0:row===gridRows?height-segmentWidth:row*cellSize-segmentWidth/2;
+      targetContext.fillStyle=color;
+      targetContext.fillRect(offsetX+col*cellSize,offsetY+y,cellSize,segmentWidth);
+    }
     for(let row=0;row<gridRows;row++){
       for(let col=0;col<=gridCols;col++){
         const index=row*(gridCols+1)+col;
-        const color=verticalColors[index], segmentWidth=verticalWidths[index]||lineWidth;
-        if(!color&&segmentWidth===lineWidth)continue;
-        const x=col===0?0:col===gridCols?width-segmentWidth:col*cellSize-segmentWidth/2;
-        targetContext.fillStyle=color||baseColor;
-        targetContext.fillRect(offsetX+x,offsetY+row*cellSize,segmentWidth,cellSize);
+        drawVertical(row,col,index,baseColor);
       }
     }
     for(let row=0;row<=gridRows;row++){
       for(let col=0;col<gridCols;col++){
         const index=row*gridCols+col;
-        const color=horizontalColors[index], segmentWidth=horizontalWidths[index]||lineWidth;
-        if(!color&&segmentWidth===lineWidth)continue;
-        const y=row===0?0:row===gridRows?height-segmentWidth:row*cellSize-segmentWidth/2;
-        targetContext.fillStyle=color||baseColor;
-        targetContext.fillRect(offsetX+col*cellSize,offsetY+y,cellSize,segmentWidth);
+        drawHorizontal(row,col,index,baseColor);
+      }
+    }
+    for(let row=0;row<=gridRows;row++){
+      for(let col=0;col<gridCols;col++){
+        const index=row*gridCols+col;
+        if(horizontalColors?.[index])drawHorizontal(row,col,index,horizontalColors[index]);
+      }
+    }
+    for(let row=0;row<gridRows;row++){
+      for(let col=0;col<=gridCols;col++){
+        const index=row*(gridCols+1)+col;
+        if(verticalColors?.[index])drawVertical(row,col,index,verticalColors[index]);
       }
     }
   }
@@ -641,25 +641,27 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
 
     if(referenceImage){ctx.save();ctx.globalAlpha=imageOpacity;ctx.drawImage(referenceImage,0,0,width,height);ctx.restore();}
     if(showGrid)drawGrid(ctx,width,height);
+    if(showGrid&&gridSegmentToolActive&&!drawing&&hoveredGridSegment)drawGridSegmentPreview(hoveredGridSegment);
     $('mapInfo').textContent=`${cols} × ${rows} 타일 · ${width} × ${height} px`;
     $('pixelSize').textContent=`${width} × ${height}`;
     $('zoomLabel').textContent=Math.round(zoom*100)+'%';
   }
 
   function choose(tool){
+    const hadPreview=Boolean(hoveredGridSegment);
     gridSegmentToolActive=false;
     $('gridSegmentTool').classList.remove('active');
     $('gridSegmentTool').setAttribute('aria-pressed','false');
     $('gridSegmentEraser').classList.remove('active');
     $('gridSegmentEraser').setAttribute('aria-pressed','false');
-    $('gridSegmentWidthTool').classList.remove('active');
-    $('gridSegmentWidthTool').setAttribute('aria-pressed','false');
+    hoveredGridSegment=null;
     selected=tool;
     document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
     if(tool !== 'erase' && tool !== 'erase-all' && tool !== 'floor' && tool !== 'current-color') {
       $('customColor').value = tool;
       $('currentColorSwatch').style.backgroundColor = tool;
     }
+    if(hadPreview)render();
   }
 
   function applyTool(index, tool){
@@ -722,11 +724,11 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     const widths=direction==='v'?verticalGridWidths:horizontalGridWidths;
     const index=Number(indexText);
     const color=gridSegmentMode==='erase'?null:$('gridSegmentColor').value;
-    const width=gridSegmentMode==='width'?Number($('gridSegmentWidth').value):null;
-    if(gridSegmentMode==='width'?widths[index]===width:colors[index]===color)return false;
+    const width=gridSegmentMode==='erase'?null:widths[index]??Number($('gridSegmentWidth').value);
+    if(colors[index]===color&&widths[index]===width)return false;
     if(!gridStrokeRemembered){remember();gridStrokeRemembered=true;}
-    if(gridSegmentMode==='width')widths[index]=width;
-    else colors[index]=color;
+    colors[index]=color;
+    widths[index]=width;
     return true;
   }
 
@@ -737,8 +739,8 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     $('gridSegmentTool').setAttribute('aria-pressed',String(mode==='paint'));
     $('gridSegmentEraser').classList.toggle('active',mode==='erase');
     $('gridSegmentEraser').setAttribute('aria-pressed',String(mode==='erase'));
-    $('gridSegmentWidthTool').classList.toggle('active',mode==='width');
-    $('gridSegmentWidthTool').setAttribute('aria-pressed',String(mode==='width'));
+    hoveredGridSegment=null;
+    render();
   }
 
   function updateAllGridSegmentColors(color){
@@ -757,16 +759,54 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   }
 
   function clearGridSegmentColors(){
-    if(!verticalGridColors.some(Boolean)&&!horizontalGridColors.some(Boolean)){
+    if(!verticalGridColors.some(Boolean)&&!horizontalGridColors.some(Boolean)&&!verticalGridWidths.some(value=>value!==null)&&!horizontalGridWidths.some(value=>value!==null)){
       toast('지울 부분 격자선이 없습니다.');
       return;
     }
     remember();
     verticalGridColors=verticalGridColors.map(()=>null);
     horizontalGridColors=horizontalGridColors.map(()=>null);
+    verticalGridWidths=verticalGridWidths.map(()=>null);
+    horizontalGridWidths=horizontalGridWidths.map(()=>null);
     render();
     saveLocal();
     toast('모든 격자선을 기본색으로 되돌렸습니다.');
+  }
+
+  function drawGridSegmentPreview(key){
+    const [direction,indexText]=key.split(':');
+    const index=Number(indexText);
+    const colors=direction==='v'?verticalGridColors:horizontalGridColors;
+    const widths=direction==='v'?verticalGridWidths:horizontalGridWidths;
+    const previewWidth=gridSegmentMode==='paint'?widths[index]??Number($('gridSegmentWidth').value):widths[index]||gridLineWidth;
+    ctx.save();
+    ctx.globalAlpha=.55;
+    ctx.fillStyle=gridSegmentMode==='erase'?gridColor:($('gridSegmentColor').value||colors[index]||gridColor);
+    if(direction==='v'){
+      const row=Math.floor(index/(cols+1)),col=index%(cols+1);
+      const x=col===0?0:col===cols?cols*tileSize-previewWidth:col*tileSize-previewWidth/2;
+      ctx.fillRect(x,row*tileSize,previewWidth,tileSize);
+    }else{
+      const row=Math.floor(index/cols),col=index%cols;
+      const y=row===0?0:row===rows?rows*tileSize-previewWidth:row*tileSize-previewWidth/2;
+      ctx.fillRect(col*tileSize,y,tileSize,previewWidth);
+    }
+    ctx.restore();
+  }
+
+  function paintGridSegmentPath(start,end){
+    const rect=canvas.getBoundingClientRect();
+    const distance=Math.hypot((end.clientX-start.clientX)*canvas.width/rect.width,(end.clientY-start.clientY)*canvas.height/rect.height);
+    const steps=Math.max(1,Math.ceil(distance/Math.max(1,tileSize/4)));
+    let changed=false;
+    for(let step=1;step<=steps;step++){
+      const progress=step/steps;
+      changed=paintGridSegment({
+        clientX:start.clientX+(end.clientX-start.clientX)*progress,
+        clientY:start.clientY+(end.clientY-start.clientY)*progress
+      })||changed;
+    }
+    return changed;
   }
 
   function resizeGridSegments(newCols,newRows){
@@ -800,11 +840,25 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     horizontalGridWidths=nextHorizontalWidths;
   }
 
-  canvas.addEventListener('pointerdown',e=>{ if(e.button!==0)return; e.preventDefault(); drawing=true; drawingGridLines=gridSegmentToolActive; gridStrokeRemembered=false; drawingGridDirection=null; lastCell=-1; lastGridSegment=null; if(drawingGridLines){if(paintGridSegment(e))render();}else{remember();paint(cellFromEvent(e));render();} canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove',e=>{ if(!drawing)return; if(drawingGridLines){if(paintGridSegment(e))render();return;} const before=lastCell; paint(cellFromEvent(e)); if(before!==lastCell)render(); });
-  canvas.addEventListener('pointerup',()=>{if(drawingGridLines&&gridStrokeRemembered)saveLocal();else if(!drawingGridLines&&drawing)saveLocal();drawing=false;drawingGridLines=false;gridStrokeRemembered=false;drawingGridDirection=null;lastCell=-1;lastGridSegment=null;});
-  canvas.addEventListener('pointercancel',()=>{if(gridStrokeRemembered)saveLocal();drawing=false;drawingGridLines=false;gridStrokeRemembered=false;drawingGridDirection=null;lastCell=-1;lastGridSegment=null;});
-  canvas.addEventListener('contextmenu',e=>{e.preventDefault();if(gridSegmentToolActive){const key=gridSegmentFromEvent(e);if(!key)return;const [direction,indexText]=key.split(':');const colors=direction==='v'?verticalGridColors:horizontalGridColors;const widths=direction==='v'?verticalGridWidths:horizontalGridWidths;const index=Number(indexText);const changed=gridSegmentMode==='width'?widths[index]!==null:colors[index]!==null;if(changed){remember();if(gridSegmentMode==='width')widths[index]=null;else colors[index]=null;render();saveLocal();}return;}const idx=cellFromEvent(e);if(idx>=0){remember();tiles[idx]=null;render();saveLocal();}});
+  canvas.addEventListener('pointerdown',e=>{ if(e.button!==0)return; e.preventDefault(); drawing=true; drawingGridLines=gridSegmentToolActive; gridStrokeRemembered=false; drawingGridDirection=null; lastCell=-1; lastGridSegment=null; hoveredGridSegment=null; lastGridPointer={clientX:e.clientX,clientY:e.clientY}; if(drawingGridLines){if(paintGridSegment(e))render();}else{remember();paint(cellFromEvent(e));render();} canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove',e=>{
+    if(!drawing){
+      if(gridSegmentToolActive){const key=gridSegmentFromEvent(e);if(key!==hoveredGridSegment){hoveredGridSegment=key;render();}}
+      return;
+    }
+    if(drawingGridLines){
+      const current={clientX:e.clientX,clientY:e.clientY};
+      const changed=paintGridSegmentPath(lastGridPointer||current,current);
+      lastGridPointer=current;
+      if(changed)render();
+      return;
+    }
+    const before=lastCell; paint(cellFromEvent(e)); if(before!==lastCell)render();
+  });
+  canvas.addEventListener('pointerup',()=>{if(drawingGridLines&&gridStrokeRemembered)saveLocal();else if(!drawingGridLines&&drawing)saveLocal();drawing=false;drawingGridLines=false;gridStrokeRemembered=false;drawingGridDirection=null;lastCell=-1;lastGridSegment=null;lastGridPointer=null;});
+  canvas.addEventListener('pointercancel',()=>{if(gridStrokeRemembered)saveLocal();drawing=false;drawingGridLines=false;gridStrokeRemembered=false;drawingGridDirection=null;lastCell=-1;lastGridSegment=null;lastGridPointer=null;});
+  canvas.addEventListener('pointerleave',()=>{if(!drawing&&hoveredGridSegment){hoveredGridSegment=null;render();}});
+  canvas.addEventListener('contextmenu',e=>{e.preventDefault();if(gridSegmentToolActive){const key=gridSegmentFromEvent(e);if(!key)return;const [direction,indexText]=key.split(':');const colors=direction==='v'?verticalGridColors:horizontalGridColors;const widths=direction==='v'?verticalGridWidths:horizontalGridWidths;const index=Number(indexText);if(colors[index]!==null||widths[index]!==null){remember();colors[index]=null;widths[index]=null;render();saveLocal();}return;}const idx=cellFromEvent(e);if(idx>=0){remember();tiles[idx]=null;render();saveLocal();}});
   window.addEventListener('resize',render);
 
   $('floorTool').addEventListener('click', () => choose('floor'));
@@ -834,17 +888,29 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   $('tileSize').addEventListener('change',()=>{saveLocal();});
 
   $('gridColor').addEventListener('input',e=>{gridColor=e.target.value;render();saveLocal();});
-  $('gridSegmentColor').addEventListener('input',e=>{gridSegmentColor=e.target.value;saveLocal();});
-  $('gridSegmentTool').addEventListener('click',()=>{if(gridSegmentToolActive&&gridSegmentMode==='paint'){gridSegmentToolActive=false;$('gridSegmentTool').classList.remove('active');$('gridSegmentTool').setAttribute('aria-pressed','false');}else setGridSegmentMode('paint');});
-  $('gridSegmentEraser').addEventListener('click',()=>{if(gridSegmentToolActive&&gridSegmentMode==='erase'){gridSegmentToolActive=false;$('gridSegmentEraser').classList.remove('active');$('gridSegmentEraser').setAttribute('aria-pressed','false');}else setGridSegmentMode('erase');});
-  $('gridSegmentWidthTool').addEventListener('click',()=>{if(gridSegmentToolActive&&gridSegmentMode==='width'){gridSegmentToolActive=false;$('gridSegmentWidthTool').classList.remove('active');$('gridSegmentWidthTool').setAttribute('aria-pressed','false');}else setGridSegmentMode('width');});
+  $('gridSegmentColor').addEventListener('input',e=>{gridSegmentColor=e.target.value;saveLocal();if(hoveredGridSegment)render();});
+  $('gridSegmentTool').addEventListener('click',()=>{if(gridSegmentToolActive&&gridSegmentMode==='paint'){gridSegmentToolActive=false;$('gridSegmentTool').classList.remove('active');$('gridSegmentTool').setAttribute('aria-pressed','false');hoveredGridSegment=null;render();}else setGridSegmentMode('paint');});
+  $('gridSegmentEraser').addEventListener('click',()=>{if(gridSegmentToolActive&&gridSegmentMode==='erase'){gridSegmentToolActive=false;$('gridSegmentEraser').classList.remove('active');$('gridSegmentEraser').setAttribute('aria-pressed','false');hoveredGridSegment=null;render();}else setGridSegmentMode('erase');});
   $('recolorGridSegmentsBtn').addEventListener('click',()=>updateAllGridSegmentColors($('gridSegmentColor').value));
   $('clearGridSegmentsBtn').addEventListener('click',clearGridSegmentColors);
   function setGridLineWidth(value){const parsed=Number(value);gridLineWidth=Math.max(.5,Math.min(8,Math.round((Number.isFinite(parsed)?parsed:1)*2)/2));$('gridLineWidth').value=gridLineWidth;$('gridLineWidthNumber').value=gridLineWidth;$('gridLineWidthValue').textContent=gridLineWidth+' px';render();}
   $('gridLineWidth').addEventListener('input',e=>{setGridLineWidth(e.target.value);saveLocal();});
   $('gridLineWidthNumber').addEventListener('input',e=>{if(e.target.value==='')return;setGridLineWidth(e.target.value);saveLocal();});
   $('gridLineWidthNumber').addEventListener('change',()=>{setGridLineWidth($('gridLineWidthNumber').value);saveLocal();});
-  function setGridSegmentWidth(value){const parsed=Number(value);const width=Math.max(.5,Math.min(8,Math.round((Number.isFinite(parsed)?parsed:1)*2)/2));$('gridSegmentWidth').value=width;$('gridSegmentWidthNumber').value=width;$('gridSegmentWidthValue').textContent=width+' px';}
+  function setGridSegmentWidth(value){
+    const parsed=Number(value);
+    const width=Math.max(.5,Math.min(8,Math.round((Number.isFinite(parsed)?parsed:1)*2)/2));
+    $('gridSegmentWidth').value=width;$('gridSegmentWidthNumber').value=width;$('gridSegmentWidthValue').textContent=width+' px';
+    const hasColoredSegments=verticalGridColors.some(Boolean)||horizontalGridColors.some(Boolean);
+    const unchanged=verticalGridColors.every((color,index)=>!color||verticalGridWidths[index]===width)&&
+      horizontalGridColors.every((color,index)=>!color||horizontalGridWidths[index]===width);
+    if(hasColoredSegments&&!unchanged){
+      verticalGridWidths=verticalGridWidths.map((value,index)=>verticalGridColors[index]?width:null);
+      horizontalGridWidths=horizontalGridWidths.map((value,index)=>horizontalGridColors[index]?width:null);
+      saveLocal();
+    }
+    render();
+  }
   $('gridSegmentWidth').addEventListener('input',e=>setGridSegmentWidth(e.target.value));
   $('gridSegmentWidthNumber').addEventListener('input',e=>{if(e.target.value!=='')setGridSegmentWidth(e.target.value);});
   $('gridSegmentWidthNumber').addEventListener('change',()=>setGridSegmentWidth($('gridSegmentWidthNumber').value));
