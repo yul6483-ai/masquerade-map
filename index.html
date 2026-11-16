@@ -29,13 +29,13 @@ button { cursor: pointer; }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-mark { width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.55); border-radius: 10px; display:grid; place-items:center; font-weight:800; letter-spacing:-1px; }
 .brand-name { font-family: var(--site-font-heading); font-weight: 750; letter-spacing: -.035em; font-size: calc(18px * var(--site-heading-scale)); white-space: nowrap; }
-.brand-sub { opacity:.75; font-size:12px; margin-top:2px; }
 .top-actions { display:flex; align-items:center; gap:8px; }
 .btn { border:1px solid var(--line); border-radius: calc(10px * var(--site-radius-scale)); background:var(--surface); color:var(--text); padding:9px 13px; font-size:13px; font-weight:650; display:inline-flex; align-items:center; justify-content:center; gap:7px; transition:background .15s, transform .15s; white-space:nowrap; }
 .btn:hover { background:var(--hover); }
 .btn:active { transform:translateY(1px); }
 .btn.primary { background:var(--site-primary); border-color:var(--site-primary); color:var(--site-on-primary); }
 .btn.primary:hover { filter:brightness(1.08); }
+.btn.active { border-color:var(--site-primary); box-shadow:0 0 0 2px color-mix(in srgb, var(--site-primary) 13%, transparent); }
 .btn.ghost-top { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.25); color:white; }
 .btn.ghost-top:hover { background:rgba(255,255,255,.2); }
 .btn.icon-only { width:36px; height:36px; padding:0; }
@@ -133,7 +133,6 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
 }
 @media (max-width: 680px) {
   .topbar { height:auto; min-height:62px; padding:12px 15px; }
-  .brand-sub { display:none; }
   .top-actions .btn span { display:none; }
   .top-actions .btn { width:36px; height:36px; padding:0; }
   .workspace { display:flex; flex-direction:column; }
@@ -160,7 +159,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   <header class="topbar">
     <div class="brand">
       <div class="brand-mark">M</div>
-      <div><div class="brand-name">Masquerade Map Maker</div><div class="brand-sub">COCOfolia map studio</div></div>
+      <div class="brand-name">Masquerade Map Maker</div>
     </div>
     <div class="top-actions">
       <button class="btn ghost-top" id="newBtn" title="새 맵"><span>새 맵</span>＋</button>
@@ -213,7 +212,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
           <button class="btn" id="clearBtn">맵 비우기</button>
         </div>
       </section>
-      <div class="notice">타일을 클릭하거나 드래그해 칠할 수 있어요. 오른쪽 클릭은 위에 놓인 타일만 지웁니다.</div>
+      <div class="notice">타일은 클릭하거나 드래그해 칠할 수 있어요. 격자선 부분 변경 도구에서 우클릭하면 선분이 기본색으로 돌아갑니다.</div>
     </aside>
     <section class="canvas-area">
       <div class="canvas-heading">
@@ -231,9 +230,6 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
           <div class="field"><label for="mapH">세로 타일</label><input id="mapH" type="number" min="1" max="30" value="9"></div>
         </div>
         <div class="field"><label for="tileSize">타일 한 칸 크기 <span id="tileSizeValue" style="color:var(--muted)">64 px</span></label><div class="size-controls"><input id="tileSize" type="range" min="32" max="128" step="1" value="64"><input id="tileSizeNumber" type="number" min="32" max="128" step="1" value="64" aria-label="타일 한 칸 크기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px)</div></div>
-        <div class="field"><label for="gridColor">격자선 색상</label><input id="gridColor" type="color" value="#c8c5bb" style="width:100%;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:3px"></div>
-        <div class="field"><label for="gridLineWidth">격자선 굵기 <span id="gridLineWidthValue" class="range-value">1 px</span></label><div class="size-controls"><input id="gridLineWidth" type="range" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 조절"><input id="gridLineWidthNumber" type="number" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px), 0.5–8</div></div>
-        <label class="check-row"><input id="showGrid" type="checkbox" checked> 격자선 표시</label>
         <label class="check-row"><input id="transparentFloor" type="checkbox"> 바닥색 투명하게 출력</label>
         <div class="export-tools">
           <button class="btn" id="gridPngBtn">격자만 PNG</button>
@@ -241,6 +237,20 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
         </div>
         <div class="stat-card"><div class="stat-number" id="pixelSize">576 × 576</div><div class="stat-caption">PNG 출력 크기 (픽셀)</div></div>
         <button class="btn primary" id="applySize" style="width:100%;margin-top:12px">맵 크기 적용</button>
+      </section>
+      <section class="panel-section">
+        <div class="section-label">GRID LINES</div>
+        <div class="field"><label for="gridColor">격자선 색상</label><input id="gridColor" type="color" value="#c8c5bb" style="width:100%;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:3px"></div>
+        <div class="field"><label for="gridSegmentColor">부분 격자선 색상</label><input id="gridSegmentColor" type="color" value="#d9534f" style="width:100%;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:3px"></div>
+        <button class="btn" id="gridSegmentTool" type="button" aria-pressed="false" style="width:100%">격자선 부분 변경</button>
+        <button class="btn" id="gridSegmentEraser" type="button" aria-pressed="false" style="width:100%;margin-top:7px">격자선 지우개</button>
+        <div class="export-tools">
+          <button class="btn" id="recolorGridSegmentsBtn" type="button">부분색 일괄 변경</button>
+          <button class="btn" id="clearGridSegmentsBtn" type="button">기본색으로 변경</button>
+        </div>
+        <div class="small-note" style="margin-top:7px">선분은 한 줄씩 클릭하거나 같은 방향으로 드래그해 칠할 수 있어요. 우클릭으로도 기본색으로 되돌릴 수 있습니다. 실행 취소는 한 번의 클릭·드래그 전체를 되돌립니다.</div>
+        <div class="field"><label for="gridLineWidth">격자선 굵기 <span id="gridLineWidthValue" class="range-value">1 px</span></label><div class="size-controls"><input id="gridLineWidth" type="range" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 조절"><input id="gridLineWidthNumber" type="number" min="0.5" max="8" step="0.5" value="1" aria-label="격자선 굵기 직접 입력"></div><div class="small-note" style="text-align:right;margin-top:4px">픽셀(px), 0.5–8</div></div>
+        <label class="check-row"><input id="showGrid" type="checkbox" checked> 격자선 표시</label>
       </section>
       <section class="panel-section">
         <div class="section-label">REFERENCE IMAGE</div>
@@ -273,21 +283,25 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   
   let floorColor = '#e8e4d9';
   let customSlots = []; // 사용자가 추가한 추가 색상 팔레트 슬롯 배열
-  let cols=9, rows=9, tileSize=64, gridColor='#c8c5bb', gridLineWidth=1, showGrid=true, transparentFloor=false, selected='floor', zoom=1, referenceImage=null, imageOpacity=.5;
+  let cols=9, rows=9, tileSize=64, gridColor='#c8c5bb', gridLineWidth=1, gridSegmentColor='#d9534f', showGrid=true, transparentFloor=false, selected='floor', zoom=1, referenceImage=null, imageOpacity=.5;
   let floors=Array(cols*rows).fill(true), tiles=Array(cols*rows).fill(null);
+  let verticalGridColors=Array((cols+1)*rows).fill(null), horizontalGridColors=Array((rows+1)*cols).fill(null);
   let renamingIndex=-1;
   let savedMaps=[];
-  let history=[], future=[], drawing=false, lastCell=-1;
+  let history=[], future=[], drawing=false, drawingGridLines=false, gridSegmentToolActive=false, gridSegmentMode='paint', gridStrokeRemembered=false, drawingGridDirection=null, lastCell=-1, lastGridSegment=null;
 
   function snapshot(){
     return {
-      cols, rows, tileSize, gridColor, gridLineWidth, showGrid, transparentFloor, floorColor, customSlots:customSlots.map(slot=>({...slot})),
+      cols, rows, tileSize, gridColor, gridLineWidth, gridSegmentColor, verticalGridColors:[...verticalGridColors], horizontalGridColors:[...horizontalGridColors], showGrid, transparentFloor, floorColor, customSlots:customSlots.map(slot=>({...slot})),
       floors:[...floors], tiles:[...tiles], projectName:$('projectName').value
     };
   }
   function remember(){ history.push(snapshot()); if(history.length>80) history.shift(); future=[]; updateHistoryButtons(); }
   function restore(s){
     cols=s.cols; rows=s.rows; tileSize=s.tileSize; gridColor=s.gridColor; gridLineWidth=s.gridLineWidth ?? 1; showGrid=s.showGrid; transparentFloor=s.transparentFloor||false;
+    gridSegmentColor=s.gridSegmentColor||'#d9534f';
+    verticalGridColors=Array.isArray(s.verticalGridColors)?[...s.verticalGridColors]:Array((cols+1)*rows).fill(null);
+    horizontalGridColors=Array.isArray(s.horizontalGridColors)?[...s.horizontalGridColors]:Array((rows+1)*cols).fill(null);
     floorColor = s.floorColor || '#e8e4d9';
     customSlots = (s.customSlots || []).map(slot=>typeof slot==='string'?{color:slot,name:slot}:{color:slot.color,name:slot.name||slot.color});
     if(Array.isArray(s.floors)){
@@ -299,7 +313,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     }
     
     $('mapW').value=cols; $('mapH').value=rows; $('tileSize').value=tileSize; $('tileSizeNumber').value=tileSize;
-    $('tileSizeValue').textContent=tileSize+' px'; $('gridColor').value=gridColor; $('gridLineWidth').value=gridLineWidth; $('gridLineWidthNumber').value=gridLineWidth; $('gridLineWidthValue').textContent=gridLineWidth+' px'; $('showGrid').checked=showGrid;
+    $('tileSizeValue').textContent=tileSize+' px'; $('gridColor').value=gridColor; $('gridSegmentColor').value=gridSegmentColor; $('gridLineWidth').value=gridLineWidth; $('gridLineWidthNumber').value=gridLineWidth; $('gridLineWidthValue').textContent=gridLineWidth+' px'; $('showGrid').checked=showGrid;
     $('transparentFloor').checked=transparentFloor;
     $('projectName').value=s.projectName||'새로운 마스레이드 맵';
     $('floorSwatch').style.background = floorColor;
@@ -318,6 +332,9 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
       Number.isInteger(data.tileSize) && data.tileSize >= 32 && data.tileSize <= 128 &&
       isHexColor(data.gridColor) && isHexColor(data.floorColor) &&
       (data.gridLineWidth === undefined || (typeof data.gridLineWidth === 'number' && data.gridLineWidth >= 0.5 && data.gridLineWidth <= 8)) &&
+      (data.gridSegmentColor === undefined || isHexColor(data.gridSegmentColor)) &&
+      (data.verticalGridColors === undefined || (Array.isArray(data.verticalGridColors) && data.verticalGridColors.length === (data.cols+1)*data.rows && data.verticalGridColors.every(color=>color===null||isHexColor(color)))) &&
+      (data.horizontalGridColors === undefined || (Array.isArray(data.horizontalGridColors) && data.horizontalGridColors.length === (data.rows+1)*data.cols && data.horizontalGridColors.every(color=>color===null||isHexColor(color)))) &&
       Array.isArray(data.tiles) && data.tiles.length === data.cols * data.rows &&
       (Array.isArray(data.floors)
         ? data.floors.length === data.tiles.length && data.floors.every(floor => typeof floor === 'boolean') && data.tiles.every(tile => tile === null || isHexColor(tile))
@@ -394,6 +411,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
           const y=offsetY+row*cellSize;
           previewContext.beginPath();previewContext.moveTo(offsetX,y);previewContext.lineTo(offsetX+mapWidth,y);previewContext.stroke();
         }
+        drawGridSegments(previewContext,map.cols,map.rows,cellSize,mapWidth,mapHeight,Math.max(.5,map.gridLineWidth*cellSize/map.tileSize),map.verticalGridColors,map.horizontalGridColors,offsetX,offsetY);
       }
       const copy=document.createElement('span');
       copy.className='saved-map-copy';
@@ -573,6 +591,29 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
       const y=row===0?0:row===rows?height-gridLineWidth:row*tileSize-gridLineWidth/2;
       targetContext.fillRect(0,y,width,gridLineWidth);
     }
+    drawGridSegments(targetContext,cols,rows,tileSize,width,height,gridLineWidth,verticalGridColors,horizontalGridColors);
+  }
+
+  function drawGridSegments(targetContext,gridCols,gridRows,cellSize,width,height,lineWidth,verticalColors,horizontalColors,offsetX=0,offsetY=0){
+    if(!Array.isArray(verticalColors)||!Array.isArray(horizontalColors))return;
+    for(let row=0;row<gridRows;row++){
+      for(let col=0;col<=gridCols;col++){
+        const color=verticalColors[row*(gridCols+1)+col];
+        if(!color)continue;
+        const x=col===0?0:col===gridCols?width-lineWidth:col*cellSize-lineWidth/2;
+        targetContext.fillStyle=color;
+        targetContext.fillRect(offsetX+x,offsetY+row*cellSize,lineWidth,cellSize);
+      }
+    }
+    for(let row=0;row<=gridRows;row++){
+      for(let col=0;col<gridCols;col++){
+        const color=horizontalColors[row*gridCols+col];
+        if(!color)continue;
+        const y=row===0?0:row===gridRows?height-lineWidth:row*cellSize-lineWidth/2;
+        targetContext.fillStyle=color;
+        targetContext.fillRect(offsetX+col*cellSize,offsetY+y,cellSize,lineWidth);
+      }
+    }
   }
 
   function render(){
@@ -596,6 +637,11 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   }
 
   function choose(tool){
+    gridSegmentToolActive=false;
+    $('gridSegmentTool').classList.remove('active');
+    $('gridSegmentTool').setAttribute('aria-pressed','false');
+    $('gridSegmentEraser').classList.remove('active');
+    $('gridSegmentEraser').setAttribute('aria-pressed','false');
     selected=tool;
     document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
     if(tool !== 'erase' && tool !== 'erase-all' && tool !== 'floor' && tool !== 'current-color') {
@@ -632,11 +678,102 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     return (c>=0&&c<cols&&r>=0&&r<rows)?r*cols+c:-1;
   }
 
-  canvas.addEventListener('pointerdown',e=>{ if(e.button!==0)return; e.preventDefault(); remember(); drawing=true; lastCell=-1; paint(cellFromEvent(e)); render(); canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove',e=>{ if(!drawing)return; const before=lastCell; paint(cellFromEvent(e)); if(before!==lastCell)render(); });
-  canvas.addEventListener('pointerup',()=>{drawing=false;lastCell=-1;saveLocal();});
-  canvas.addEventListener('pointercancel',()=>{drawing=false;lastCell=-1;});
-  canvas.addEventListener('contextmenu',e=>{e.preventDefault(); const idx=cellFromEvent(e); if(idx>=0){remember();tiles[idx]=null;render();saveLocal();}});
+  function gridSegmentFromEvent(e,preferredDirection=null){
+    const rect=canvas.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*(canvas.width/rect.width);
+    const y=(e.clientY-rect.top)*(canvas.height/rect.height);
+    const tolerance=gridLineWidth/2+2*(canvas.width/rect.width);
+    const col=Math.round(x/tileSize), row=Math.round(y/tileSize);
+    const verticalDistance=Math.abs(x-col*tileSize);
+    const horizontalDistance=Math.abs(y-row*tileSize);
+    const candidates=[];
+    const verticalRow=Math.min(rows-1,Math.floor(y/tileSize));
+    if(preferredDirection!=='h'&&col>=0&&col<=cols&&verticalRow>=0&&verticalRow<rows&&verticalDistance<=tolerance){
+      candidates.push({key:`v:${verticalRow*(cols+1)+col}`,distance:verticalDistance});
+    }
+    const segmentCol=Math.min(cols-1,Math.floor(x/tileSize));
+    if(preferredDirection!=='v'&&row>=0&&row<=rows&&segmentCol>=0&&segmentCol<cols&&horizontalDistance<=tolerance){
+      candidates.push({key:`h:${row*cols+segmentCol}`,distance:horizontalDistance});
+    }
+    candidates.sort((a,b)=>a.distance-b.distance);
+    return candidates[0]?.key||null;
+  }
+
+  function paintGridSegment(e){
+    const key=gridSegmentFromEvent(e,drawingGridDirection);
+    if(!key){lastGridSegment=null;return false;}
+    if(drawingGridDirection===null)drawingGridDirection=key[0];
+    if(key===lastGridSegment)return false;
+    lastGridSegment=key;
+    const [direction,indexText]=key.split(':');
+    const colors=direction==='v'?verticalGridColors:horizontalGridColors;
+    const index=Number(indexText);
+    const color=gridSegmentMode==='erase'?null:$('gridSegmentColor').value;
+    if(colors[index]===color)return false;
+    if(!gridStrokeRemembered){remember();gridStrokeRemembered=true;}
+    colors[index]=color;
+    return true;
+  }
+
+  function setGridSegmentMode(mode){
+    gridSegmentMode=mode;
+    gridSegmentToolActive=true;
+    $('gridSegmentTool').classList.toggle('active',mode==='paint');
+    $('gridSegmentTool').setAttribute('aria-pressed',String(mode==='paint'));
+    $('gridSegmentEraser').classList.toggle('active',mode==='erase');
+    $('gridSegmentEraser').setAttribute('aria-pressed',String(mode==='erase'));
+  }
+
+  function updateAllGridSegmentColors(color){
+    const hasColoredSegments=verticalGridColors.some(Boolean)||horizontalGridColors.some(Boolean);
+    if(!hasColoredSegments){toast('변경할 부분 격자선이 없습니다.');return;}
+    if(verticalGridColors.every(value=>!value||value===color)&&horizontalGridColors.every(value=>!value||value===color)){
+      toast('이미 선택한 색상으로 칠해져 있습니다.');
+      return;
+    }
+    remember();
+    verticalGridColors=verticalGridColors.map(value=>value?color:null);
+    horizontalGridColors=horizontalGridColors.map(value=>value?color:null);
+    render();
+    saveLocal();
+    toast('칠해 둔 격자선 색을 한꺼번에 변경했습니다.');
+  }
+
+  function clearGridSegmentColors(){
+    if(!verticalGridColors.some(Boolean)&&!horizontalGridColors.some(Boolean)){
+      toast('지울 부분 격자선이 없습니다.');
+      return;
+    }
+    remember();
+    verticalGridColors=verticalGridColors.map(()=>null);
+    horizontalGridColors=horizontalGridColors.map(()=>null);
+    render();
+    saveLocal();
+    toast('모든 격자선을 기본색으로 되돌렸습니다.');
+  }
+
+  function resizeGridSegments(newCols,newRows){
+    const nextVertical=Array((newCols+1)*newRows).fill(null);
+    const nextHorizontal=Array((newRows+1)*newCols).fill(null);
+    for(let row=0;row<Math.min(rows,newRows);row++){
+      for(let col=0;col<=Math.min(cols,newCols);col++){
+        nextVertical[row*(newCols+1)+col]=verticalGridColors[row*(cols+1)+col]||null;
+      }
+    }
+    for(let row=0;row<=Math.min(rows,newRows);row++){
+      for(let col=0;col<Math.min(cols,newCols);col++){
+        nextHorizontal[row*newCols+col]=horizontalGridColors[row*cols+col]||null;
+      }
+    }
+    verticalGridColors=nextVertical;
+    horizontalGridColors=nextHorizontal;
+  }
+
+  canvas.addEventListener('pointerdown',e=>{ if(e.button!==0)return; e.preventDefault(); drawing=true; drawingGridLines=gridSegmentToolActive; gridStrokeRemembered=false; drawingGridDirection=null; lastCell=-1; lastGridSegment=null; if(drawingGridLines){if(paintGridSegment(e))render();}else{remember();paint(cellFromEvent(e));render();} canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove',e=>{ if(!drawing)return; if(drawingGridLines){if(paintGridSegment(e))render();return;} const before=lastCell; paint(cellFromEvent(e)); if(before!==lastCell)render(); });
+  canvas.addEventListener('pointerup',()=>{if(drawingGridLines&&gridStrokeRemembered)saveLocal();else if(!drawingGridLines&&drawing)saveLocal();drawing=false;drawingGridLines=false;gridStrokeRemembered=false;drawingGridDirection=null;lastCell=-1;lastGridSegment=null;});
+  canvas.addEventListener('pointercancel',()=>{if(gridStrokeRemembered)saveLocal();drawing=false;drawingGridLines=false;gridStrokeRemembered=false;drawingGridDirection=null;lastCell=-1;lastGridSegment=null;});
+  canvas.addEventListener('contextmenu',e=>{e.preventDefault();if(gridSegmentToolActive){const key=gridSegmentFromEvent(e);if(!key)return;const [direction,indexText]=key.split(':');const colors=direction==='v'?verticalGridColors:horizontalGridColors;const index=Number(indexText);if(colors[index]){remember();colors[index]=null;render();saveLocal();}return;}const idx=cellFromEvent(e);if(idx>=0){remember();tiles[idx]=null;render();saveLocal();}});
   window.addEventListener('resize',render);
 
   $('floorTool').addEventListener('click', () => choose('floor'));
@@ -658,7 +795,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
     toast('기본 바닥 타일 색을 변경했습니다.');
   });
 
-  $('applySize').addEventListener('click',()=>{ const nw=Math.max(1,Math.min(30,parseInt($('mapW').value)||1)); const nh=Math.max(1,Math.min(30,parseInt($('mapH').value)||1)); remember(); const nextTiles=Array(nw*nh).fill(null), nextFloors=Array(nw*nh).fill(true); for(let y=0;y<Math.min(rows,nh);y++)for(let x=0;x<Math.min(cols,nw);x++){nextTiles[y*nw+x]=tiles[y*cols+x];nextFloors[y*nw+x]=floors[y*cols+x];} cols=nw;rows=nh;tiles=nextTiles;floors=nextFloors;render();saveLocal();toast('맵 크기를 적용했어요.'); });
+  $('applySize').addEventListener('click',()=>{ const nw=Math.max(1,Math.min(30,parseInt($('mapW').value)||1)); const nh=Math.max(1,Math.min(30,parseInt($('mapH').value)||1)); remember(); const nextTiles=Array(nw*nh).fill(null), nextFloors=Array(nw*nh).fill(true); for(let y=0;y<Math.min(rows,nh);y++)for(let x=0;x<Math.min(cols,nw);x++){nextTiles[y*nw+x]=tiles[y*cols+x];nextFloors[y*nw+x]=floors[y*cols+x];} resizeGridSegments(nw,nh); cols=nw;rows=nh;tiles=nextTiles;floors=nextFloors;render();saveLocal();toast('맵 크기를 적용했어요.'); });
   function setTileSize(value){tileSize=Math.max(32,Math.min(128,Math.round(Number(value)||64)));$('tileSize').value=tileSize;$('tileSizeNumber').value=tileSize;$('tileSizeValue').textContent=tileSize+' px';render();}
   $('tileSize').addEventListener('input',e=>setTileSize(e.target.value));
   $('tileSizeNumber').addEventListener('input',e=>{if(e.target.value==='')return;setTileSize(e.target.value);});
@@ -666,6 +803,11 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   $('tileSize').addEventListener('change',()=>{saveLocal();});
 
   $('gridColor').addEventListener('input',e=>{gridColor=e.target.value;render();saveLocal();});
+  $('gridSegmentColor').addEventListener('input',e=>{gridSegmentColor=e.target.value;saveLocal();});
+  $('gridSegmentTool').addEventListener('click',()=>{if(gridSegmentToolActive&&gridSegmentMode==='paint'){gridSegmentToolActive=false;$('gridSegmentTool').classList.remove('active');$('gridSegmentTool').setAttribute('aria-pressed','false');}else setGridSegmentMode('paint');});
+  $('gridSegmentEraser').addEventListener('click',()=>{if(gridSegmentToolActive&&gridSegmentMode==='erase'){gridSegmentToolActive=false;$('gridSegmentEraser').classList.remove('active');$('gridSegmentEraser').setAttribute('aria-pressed','false');}else setGridSegmentMode('erase');});
+  $('recolorGridSegmentsBtn').addEventListener('click',()=>updateAllGridSegmentColors($('gridSegmentColor').value));
+  $('clearGridSegmentsBtn').addEventListener('click',clearGridSegmentColors);
   function setGridLineWidth(value){const parsed=Number(value);gridLineWidth=Math.max(.5,Math.min(8,Math.round((Number.isFinite(parsed)?parsed:1)*2)/2));$('gridLineWidth').value=gridLineWidth;$('gridLineWidthNumber').value=gridLineWidth;$('gridLineWidthValue').textContent=gridLineWidth+' px';render();}
   $('gridLineWidth').addEventListener('input',e=>{setGridLineWidth(e.target.value);saveLocal();});
   $('gridLineWidthNumber').addEventListener('input',e=>{if(e.target.value==='')return;setGridLineWidth(e.target.value);saveLocal();});
@@ -683,7 +825,7 @@ input[type=range]::-moz-range-thumb { background-color: var(--site-primary); }
   $('redoBtn').addEventListener('click',()=>{if(!future.length)return;history.push(snapshot());restore(future.pop());updateHistoryButtons();saveLocal();});
   $('fillBtn').addEventListener('click',()=>{remember();for(let i=0;i<tiles.length;i++)applyTool(i,selected);render();saveLocal();});
   $('clearBtn').addEventListener('click',()=>{remember();floors=floors.map(()=>false);tiles=tiles.map(()=>null);render();saveLocal();toast('맵을 비웠어요.');});
-  $('newBtn').addEventListener('click',()=>{if(!confirm('새 맵을 만들까요? 현재 작업은 자동 저장되어 있어요.'))return;remember();cols=9;rows=9;tileSize=64;floorColor='#e8e4d9';$('floorSwatch').style.background=floorColor;customSlots=[];floors=Array(81).fill(true);tiles=Array(81).fill(null);$('mapW').value=9;$('mapH').value=9;$('tileSize').value=64;$('tileSizeNumber').value=64;$('tileSizeValue').textContent='64 px';$('projectName').value='새로운 마스레이드 맵';zoom=1;renderPalette();render();saveLocal();toast('새 맵을 만들었어요.');});
+  $('newBtn').addEventListener('click',()=>{if(!confirm('새 맵을 만들까요? 현재 작업은 자동 저장되어 있어요.'))return;remember();cols=9;rows=9;tileSize=64;gridSegmentColor='#d9534f';$('gridSegmentColor').value=gridSegmentColor;verticalGridColors=Array(90).fill(null);horizontalGridColors=Array(90).fill(null);floorColor='#e8e4d9';$('floorSwatch').style.background=floorColor;customSlots=[];floors=Array(81).fill(true);tiles=Array(81).fill(null);$('mapW').value=9;$('mapH').value=9;$('tileSize').value=64;$('tileSizeNumber').value=64;$('tileSizeValue').textContent='64 px';$('projectName').value='새로운 마스레이드 맵';zoom=1;renderPalette();render();saveLocal();toast('새 맵을 만들었어요.');});
   
   function saveLocal(){try{localStorage.setItem('masqueradeMapMaker',JSON.stringify(snapshot()));}catch(e){}}
   function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
